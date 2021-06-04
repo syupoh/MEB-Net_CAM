@@ -1,0 +1,21 @@
+['logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.2_fake_2021-04-06T10:16/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.5_fake_2021-04-06T09:17/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.6_fake_2021-04-06T10:30/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.3_fake_2021-04-06T11:16/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.4_fake_2021-04-06T18:49/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.7_fake_2021-04-06T11:36/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.8_fake_2021-04-06T18:49/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.9_fake_2021-04-07T02:16/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.005_0.5_fake_2021-04-07T02:15/checkpoint_79.pth.tar']
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------

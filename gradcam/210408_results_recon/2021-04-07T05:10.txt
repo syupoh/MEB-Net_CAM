@@ -1,0 +1,309 @@
+['logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.2_fake_2021-04-06T10:16/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.5_fake_2021-04-06T09:17/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.6_fake_2021-04-06T10:30/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.3_fake_2021-04-06T11:16/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.4_fake_2021-04-06T18:49/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.7_fake_2021-04-06T11:36/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.8_fake_2021-04-06T18:49/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.9_fake_2021-04-07T02:16/checkpoint_79.pth.tar', 'logs/unet_dukemtmc_market1501_resnet50_0.005_0.5_fake_2021-04-07T02:15/checkpoint_79.pth.tar']
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.1_2021-04-07T05:10_person1.jpg
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.2_fake_2021-04-06T10:16/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.2_fake_2021-04-06T10:16/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.2_2021-04-07T05:10_person1.jpg
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.5_fake_2021-04-06T09:17/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.5_fake_2021-04-06T09:17/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.5_2021-04-07T05:10_person1.jpg
+tensor([[1.]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[1.]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.6_fake_2021-04-06T10:30/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.6_fake_2021-04-06T10:30/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.6_2021-04-07T05:10_person1.jpg
+tensor([[0.4985]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.4985]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.1_fake_2021-04-06T09:23/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.1_2021-04-07T05:10_person1.jpg
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.3_fake_2021-04-06T11:16/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.3_fake_2021-04-06T11:16/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.3_2021-04-07T05:10_person1.jpg
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.4_fake_2021-04-06T18:49/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.4_fake_2021-04-06T18:49/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.4_2021-04-07T05:10_person1.jpg
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.7_fake_2021-04-06T11:36/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.7_fake_2021-04-06T11:36/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.7_2021-04-07T05:10_person1.jpg
+tensor([[0.4990]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.4990]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.8_fake_2021-04-06T18:49/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.8_fake_2021-04-06T18:49/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.8_2021-04-07T05:10_person1.jpg
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.5000]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.001_0.9_fake_2021-04-07T02:16/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.001_0.9_fake_2021-04-07T02:16/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.001_0.9_2021-04-07T05:10_person1.jpg
+tensor([[0.4824]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.4824]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
+logs/unet_dukemtmc_market1501_resnet50_0.005_0.5_fake_2021-04-07T02:15/checkpoint_79.pth.tar
+=> Market1501 loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   751 |    12936 |         6
+  query    |   750 |     3368 |         6
+  gallery  |   751 |    15913 |         6
+  ----------------------------------------
+This dataset has been downloaded.
+=> DukeMTMC-reID loaded
+Dataset statistics:
+  ----------------------------------------
+  subset   | # ids | # images | # cameras
+  ----------------------------------------
+  train    |   702 |    16522 |         8
+  query    |   702 |     2228 |         8
+  gallery  |  1110 |    17661 |         8
+  ----------------------------------------
+=> Loaded checkpoint 'logs/unet_dukemtmc_market1501_resnet50_0.005_0.5_fake_2021-04-07T02:15/checkpoint_79.pth.tar'
+==============================
+['/data2/syupoh/dataset/market1501/bounding_box_test/0305_c5s3_065912_01.jpg']
+['/data2/syupoh/dataset/DukeMTMC-reID/bounding_box_test/4114_c6_f0045852.jpg']
+./gradcam/results/recon_0.005_0.5_2021-04-07T05:10_person1.jpg
+tensor([[0.4911]], device='cuda:0', grad_fn=<SigmoidBackward>)
+tensor([[0.4858]], device='cuda:0', grad_fn=<SigmoidBackward>)
+==============================
