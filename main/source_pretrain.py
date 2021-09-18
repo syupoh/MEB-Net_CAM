@@ -78,7 +78,7 @@ def get_data(name, data_dir, height, width, batch_size, workers, num_instances, 
 
 
 def main():
-    args = parser.parse_args()
+    args = get_args()
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -88,6 +88,66 @@ def main():
 
     main_worker(args)
 
+def get_args():
+    parser = argparse.ArgumentParser(description="Pre-training on the source domain")
+    # data
+    parser.add_argument('-ds', '--dataset-source', type=str, default='market1501',
+                        choices=datasets.names())
+    parser.add_argument('-dt', '--dataset-target', type=str, default='dukemtmc',
+                        choices=datasets.names())
+    parser.add_argument('-b', '--batch-size', type=int, default=32)
+    parser.add_argument('-j', '--workers', type=int, default=4)
+    parser.add_argument('--height', type=int, default=256, help="input height")
+    parser.add_argument('--width', type=int, default=128, help="input width")
+    parser.add_argument('--num-instances', type=int, default=4,
+                        help="each minibatch consist of "
+                             "(batch_size // num_instances) identities, and "
+                             "each identity has num_instances instances, "
+                             "default: 0 (NOT USE)")
+    # model
+    parser.add_argument('-a', '--arch', type=str, default='resnet50',
+                        choices=models.names())
+    parser.add_argument('--features', type=int, default=0)
+    parser.add_argument('--dropout', type=float, default=0)
+    parser.add_argument('--AEtransfer', type=str, default=None)
+
+    # optimizer
+    parser.add_argument('--lr', type=float, default=0.00035,
+                        help="learning rate of new parameters, for pretrained ")
+    parser.add_argument('--momentum', type=float, default=0.9)
+    parser.add_argument('--weight-decay', type=float, default=5e-4)
+    parser.add_argument('--warmup-step', type=int, default=10)
+    parser.add_argument('--milestones', nargs='+', type=int, default=[40, 70],
+                        help='milestones for the learning rate decay')
+    # training configs
+    parser.add_argument('--gpu', type=int, default='0',
+                        help='gpu_ids: e.g. 0  0,1,2  0,2')
+    parser.add_argument('--resume', type=str, default='', metavar='PATH')
+    parser.add_argument('--evaluate', action='store_true',
+                        help="evaluation only")
+    parser.add_argument('--eval-step', type=int, default=5)
+    parser.add_argument('--rerank', action='store_true',
+                        help="evaluation only")
+    parser.add_argument('--epochs', type=int, default=80)
+    parser.add_argument('--iters', type=int, default=200)
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--print-freq', type=int, default=10)
+    parser.add_argument('--margin', type=float, default=0.0, help='margin for the triplet loss with batch hard')
+    # path
+    working_dir = osp.dirname(osp.abspath(__file__))
+    parser.add_argument('--data-dir', type=str, metavar='PATH',
+                        default='{0}/dataset'.format(
+                            "/".join(os.getcwd().split("/")[:3])))
+                        # default='/data/syupoh/dataset/')
+    # default=osp.join(os.getcwd(), 'data'))
+    parser.add_argument('--logs-dir', type=str, metavar='PATH',
+                        default=osp.join(os.getcwd(), 'logs'))
+    # parser.add_argument('--logs-dir', type=str,
+    #                     default=None)
+
+    args = parser.parse_args()
+
+    return args
 
 def main_worker(args):
     global start_epoch, best_mAP
@@ -219,56 +279,4 @@ def main_worker(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Pre-training on the source domain")
-    # data
-    parser.add_argument('-ds', '--dataset-source', type=str, default='market1501',
-                        choices=datasets.names())
-    parser.add_argument('-dt', '--dataset-target', type=str, default='dukemtmc',
-                        choices=datasets.names())
-    parser.add_argument('-b', '--batch-size', type=int, default=32)
-    parser.add_argument('-j', '--workers', type=int, default=4)
-    parser.add_argument('--height', type=int, default=256, help="input height")
-    parser.add_argument('--width', type=int, default=128, help="input width")
-    parser.add_argument('--num-instances', type=int, default=4,
-                        help="each minibatch consist of "
-                             "(batch_size // num_instances) identities, and "
-                             "each identity has num_instances instances, "
-                             "default: 0 (NOT USE)")
-    # model
-    parser.add_argument('-a', '--arch', type=str, default='resnet50',
-                        choices=models.names())
-    parser.add_argument('--features', type=int, default=0)
-    parser.add_argument('--dropout', type=float, default=0)
-    parser.add_argument('--AEtransfer', type=str, default=None)
-
-    # optimizer
-    parser.add_argument('--lr', type=float, default=0.00035,
-                        help="learning rate of new parameters, for pretrained ")
-    parser.add_argument('--momentum', type=float, default=0.9)
-    parser.add_argument('--weight-decay', type=float, default=5e-4)
-    parser.add_argument('--warmup-step', type=int, default=10)
-    parser.add_argument('--milestones', nargs='+', type=int, default=[40, 70], help='milestones for the learning rate decay')
-    # training configs
-    parser.add_argument('--gpu', type=int, default='0',
-                        help='gpu_ids: e.g. 0  0,1,2  0,2')
-    parser.add_argument('--resume', type=str, default='', metavar='PATH')
-    parser.add_argument('--evaluate', action='store_true',
-                        help="evaluation only")
-    parser.add_argument('--eval-step', type=int, default=5)
-    parser.add_argument('--rerank', action='store_true',
-                        help="evaluation only")
-    parser.add_argument('--epochs', type=int, default=80)
-    parser.add_argument('--iters', type=int, default=200)
-    parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--print-freq', type=int, default=10)
-    parser.add_argument('--margin', type=float, default=0.0, help='margin for the triplet loss with batch hard')
-    # path
-    working_dir = osp.dirname(osp.abspath(__file__))
-    parser.add_argument('--data-dir', type=str, metavar='PATH',
-                        default ='/data2/syupoh/dataset/')
-                        # default=osp.join(os.getcwd(), 'data'))
-    parser.add_argument('--logs-dir', type=str, metavar='PATH',
-                        default=osp.join(os.getcwd(), 'logs'))
-    # parser.add_argument('--logs-dir', type=str,
-    #                     default=None)
     main()

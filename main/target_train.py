@@ -135,7 +135,7 @@ def create_model(args):
     return model_list, model_ema_list
 
 def main():
-    args = parser.parse_args()
+    args = get_args()
     if args.seed is not None:
         random.seed(args.seed)
         np.random.seed(args.seed)
@@ -144,6 +144,68 @@ def main():
 
     main_worker(args)
 
+def get_args():
+
+    parser = argparse.ArgumentParser(description="MEB-Net Training")
+    # data
+    parser.add_argument('-dt', '--dataset-target', type=str, default='market1501',
+                        choices=datasets.names())
+    parser.add_argument('-b', '--batch-size', type=int, default=64)
+    parser.add_argument('-j', '--workers', type=int, default=1)
+    parser.add_argument('--num-clusters', type=int, default=500)
+    parser.add_argument('--height', type=int, default=256,
+                        help="input height")
+    parser.add_argument('--width', type=int, default=128,
+                        help="input width")
+    parser.add_argument('--num-instances', type=int, default=4,
+                        help="each minibatch consist of "
+                             "(batch_size // num_instances) identities, and "
+                             "each identity has num_instances instances, "
+                             "default: 0 (NOT USE)")
+    # model
+    parser.add_argument('-a', '--arch', type=str, default='resnet50',
+                        choices=models.names())
+    parser.add_argument('--features', type=int, default=0)
+    parser.add_argument('--dropout', type=float, default=0)
+    # optimizer
+    parser.add_argument('--lr', type=float, default=0.00035,
+                        help="learning rate of new parameters, for pretrained "
+                             "parameters it is 10 times smaller than this")
+    parser.add_argument('--momentum', type=float, default=0.9)
+    parser.add_argument('--alpha', type=float, default=0.999)
+    parser.add_argument('--moving-avg-momentum', type=float, default=0)
+    parser.add_argument('--weight-decay', type=float, default=5e-4)
+    parser.add_argument('--soft-ce-weight', type=float, default=0.5)
+    parser.add_argument('--soft-tri-weight', type=float, default=0.8)
+    parser.add_argument('--epochs', type=int, default=40)
+    parser.add_argument('--iters', type=int, default=800)
+    # training configs
+    parser.add_argument('--init-1', type=str, default='', metavar='PATH')
+    parser.add_argument('--init-2', type=str, default='', metavar='PATH')
+    parser.add_argument('--init-3', type=str, default='', metavar='PATH')
+    parser.add_argument('--unet', type=str, default=None, metavar='PATH')
+    parser.add_argument('--init-list', type=list, default=[])
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--print-freq', type=int, default=1)
+    parser.add_argument('--eval-step', type=int, default=1)
+
+    parser.add_argument('--gpu', type=int, default='0',
+                        help='gpu_ids: e.g. 0  0,1,2  0,2')
+    parser.add_argument('--start-epoch', type=int, default=0)
+    parser.add_argument('--scatter', type=int, default=1)
+    # path
+    working_dir = osp.dirname(osp.abspath(__file__))
+    parser.add_argument('--data-dir', type=str, metavar='PATH',
+                        default='{0}/dataset'.format(
+                            "/".join(os.getcwd().split("/")[:3])))
+                        # default='/data/syupoh/dataset/')
+
+    parser.add_argument('--logs-dir', type=str, metavar='PATH',
+                        default=osp.join(os.getcwd(), 'logs'))
+
+    args = parser.parse_args()
+
+    return args
 
 def main_worker(args):
     global start_epoch, best_mAP
@@ -328,59 +390,4 @@ def main_worker(args):
     os.rename(args.logs_dir, output_directory_complete)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="MEB-Net Training")
-    # data
-    parser.add_argument('-dt', '--dataset-target', type=str, default='market1501',
-                        choices=datasets.names())
-    parser.add_argument('-b', '--batch-size', type=int, default=64)
-    parser.add_argument('-j', '--workers', type=int, default=1)
-    parser.add_argument('--num-clusters', type=int, default=500)
-    parser.add_argument('--height', type=int, default=256,
-                        help="input height")
-    parser.add_argument('--width', type=int, default=128,
-                        help="input width")
-    parser.add_argument('--num-instances', type=int, default=4,
-                        help="each minibatch consist of "
-                             "(batch_size // num_instances) identities, and "
-                             "each identity has num_instances instances, "
-                             "default: 0 (NOT USE)")
-    # model
-    parser.add_argument('-a', '--arch', type=str, default='resnet50',
-                        choices=models.names())
-    parser.add_argument('--features', type=int, default=0)
-    parser.add_argument('--dropout', type=float, default=0)
-    # optimizer
-    parser.add_argument('--lr', type=float, default=0.00035,
-                        help="learning rate of new parameters, for pretrained "
-                             "parameters it is 10 times smaller than this")
-    parser.add_argument('--momentum', type=float, default=0.9)
-    parser.add_argument('--alpha', type=float, default=0.999)
-    parser.add_argument('--moving-avg-momentum', type=float, default=0)
-    parser.add_argument('--weight-decay', type=float, default=5e-4)
-    parser.add_argument('--soft-ce-weight', type=float, default=0.5)
-    parser.add_argument('--soft-tri-weight', type=float, default=0.8)
-    parser.add_argument('--epochs', type=int, default=40)
-    parser.add_argument('--iters', type=int, default=800)
-    # training configs
-    parser.add_argument('--init-1', type=str, default='', metavar='PATH')
-    parser.add_argument('--init-2', type=str, default='', metavar='PATH')
-    parser.add_argument('--init-3', type=str, default='', metavar='PATH')
-    parser.add_argument('--unet', type=str, default=None, metavar='PATH')
-    parser.add_argument('--init-list', type=list, default=[])
-    parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--print-freq', type=int, default=1)
-    parser.add_argument('--eval-step', type=int, default=1)
-
-    parser.add_argument('--gpu', type=int, default='0',
-                        help='gpu_ids: e.g. 0  0,1,2  0,2')
-    parser.add_argument('--start-epoch', type=int, default=0)
-    parser.add_argument('--scatter', type=int, default=1)
-    # path
-    working_dir = osp.dirname(osp.abspath(__file__))
-    parser.add_argument('--data-dir', type=str, metavar='PATH',
-                        default ='/data2/syupoh/dataset/')
-                        # default=osp.join(os.getcwd(), 'data'))
-
-    parser.add_argument('--logs-dir', type=str, metavar='PATH',
-                        default=osp.join(os.getcwd(), 'logs'))
     main()
