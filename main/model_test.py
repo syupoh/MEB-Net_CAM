@@ -21,7 +21,8 @@ from mebnet.utils.serialization import load_checkpoint, save_checkpoint, copy_st
 
 
 def get_data(name, data_dir, height, width, batch_size, workers):
-    root = osp.join(data_dir, name)
+    root = osp.join(data_dir)
+    # root = osp.join(data_dir, name)
 
     dataset = datasets.create(name, root)
 
@@ -57,6 +58,9 @@ def main():
 
 def main_worker(args):
     cudnn.benchmark = True
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "{0}".format(args.gpu)
 
     log_dir = osp.dirname(args.resume)
     sys.stdout = Logger(osp.join(log_dir, 'log_test.txt'))
@@ -97,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('-dt', '--dataset-target', type=str, required=True,
                         choices=datasets.names())
     parser.add_argument('-b', '--batch-size', type=int, default=256)
-    parser.add_argument('-j', '--workers', type=int, default=4)
+    parser.add_argument('-j', '--workers', type=int, default=1)
     parser.add_argument('--height', type=int, default=256, help="input height")
     parser.add_argument('--width', type=int, default=128, help="input width")
     # model
@@ -106,12 +110,15 @@ if __name__ == '__main__':
     parser.add_argument('--features', type=int, default=0)
     parser.add_argument('--dropout', type=float, default=0)
     # testing configs
+    parser.add_argument('--gpu', type=int, default='0',
+                        help='gpu_ids: e.g. 0  0,1,2  0,2')
     parser.add_argument('--resume', type=str, required=True, metavar='PATH')
     parser.add_argument('--rerank', action='store_true',
                         help="evaluation only")
     parser.add_argument('--seed', type=int, default=1)
     # path
-    working_dir = osp.dirname(osp.abspath(__file__))
     parser.add_argument('--data-dir', type=str, metavar='PATH',
-                        default=osp.join(os.getcwd(), 'data'))
+                        default ='/data2/syupoh/dataset/')
+                        # default=osp.join(os.getcwd(), 'data'))
     main()
+

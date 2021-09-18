@@ -15,11 +15,14 @@ from mebnet import models as meb_models
 from mebnet.utils.serialization import load_checkpoint, save_checkpoint, copy_state_dict
 from mebnet.utils.logging import Logger
 
+sys.path.insert(0, os.getcwd())
 
 def preprocess_image(img):
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
-                            std=[0.229, 0.224, 0.225])
+                                     std=[0.229, 0.224, 0.225])
     preprocessing = T.Compose([
+        # T.ToPILImage(),
+        # T.Resize((256, 128), interpolation=3),
         T.ToTensor(),
         normalize,
     ])
@@ -34,7 +37,7 @@ def preprocess_image2(img):
     ])
 
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
-                            std=[0.229, 0.224, 0.225])
+                                     std=[0.229, 0.224, 0.225])
     preprocessing = T.Compose([
         T.ToTensor(),
         normalize,
@@ -43,7 +46,6 @@ def preprocess_image2(img):
     resized_img = Tresize(img)
 
     return preprocessing(resized_img).unsqueeze(0)
-
 
 def show_cam_on_image(img, mask):
     heatmap = cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_JET)
@@ -57,10 +59,11 @@ class FeatureExtractor():
     """ Class for extracting activations and
     registering gradients from targetted intermediate layers """
 
-    def __init__(self, model, target_layers):
+    def __init__(self, model, target_layers, printly):
         self.model = model
         self.target_layers = target_layers
         self.gradients = []
+        self.print = printly
 
     def save_gradient(self, grad):
         self.gradients.append(grad)
@@ -68,11 +71,15 @@ class FeatureExtractor():
     def __call__(self, x):
         outputs = []
         self.gradients = []
+
         for name, module in self.model._modules.items():
+            if self.print:
+                print('  ' + name)
             x = module(x)
             if name in self.target_layers:
                 x.register_hook(self.save_gradient)
                 outputs += [x]
+
         return outputs, x
 
 
@@ -82,10 +89,16 @@ class ModelOutputs():
     2. Activations from intermeddiate targetted layers.
     3. Gradients from intermeddiate targetted layers. """
 
-    def __init__(self, model, feature_module, target_layers):
+    def __init__(self, model, feature_module, target_layers, name=None, printly=False):
         self.model = model
         self.feature_module = feature_module
-        self.feature_extractor = FeatureExtractor(self.feature_module, target_layers)
+        self.feature_extractor = FeatureExtractor(self.feature_module, target_layers, printly)
+        self.name = name
+
+        self.target_layers = target_layers
+        self.print = printly
+        if self.print:
+            print(target_layers)
 
     def get_gradients(self):
         return self.feature_extractor.gradients
@@ -93,49 +106,29 @@ class ModelOutputs():
     def __call__(self, x):
         target_activations = []
         for name, module in self.model._modules.items():
-            # print(name)
+
+            if self.print:
+                print(name)
             # print(module)
 
             if name == 'base':
-                for name2, module2 in module._modules.items():
-                    if module2 == self.feature_module:
-                        target_activations, x = self.feature_extractor(x)
-                    elif "avgpool" in name2.lower():
-                        x = module2(x)
-                        x = x.view(x.size(0), -1)
-                    elif "gap" in name2.lower():
-                        x = module2(x)
-                        x = x.view(x.size(0), -1)
-                    else:
-                        x = module2(x)
-            elif name.find('conv_block') > -1 or name == 'd' or name == 'output_block':
-                # if module == self.feature_module:
-                #     target_activations, x = self.feature_extractor(x)
-                if name == 'conv_block1':
-                    x, c1 = module(x)
-                elif name == 'conv_block2':
-                    x, c2 = module(x)
-                elif name == 'conv_block3':
-                    x, c3 = module(x)
-                elif name == 'conv_block4':
-                    validity, c4 = module(x)
+                if self.name == 'incep':
                     target_activations, x = self.feature_extractor(x)
-                    validity = validity.view([validity.shape[0], -1])
-
-                elif name == 'd':
-                    pass
-                elif name == 'deconv_block1':
-                    d1 = module(x)
-                elif name == 'deconv_block2':
-                    d2 = module(torch.cat((c4, d1), dim=1))
-                elif name == 'deconv_block3':
-                    d3 = module(torch.cat((c3, d2), dim=1))
-                elif name == 'deconv_block4':
-                    d4 = module(torch.cat((c2, d3), dim=1))
-                elif name == 'output_block':
-                    out = module(torch.cat((c1, d4), dim=1))
                 else:
-                    x = module(x)
+                    for name2, module2 in module._modules.items():
+                        if self.print:
+                            print(' ' + name2)
+
+                        if module2 == self.feature_module:
+                            target_activations, x = self.feature_extractor(x)
+                        elif "avgpool" in name2.lower():
+                            x = module2(x)
+                            x = x.view(x.size(0), -1)
+                        elif "gap" in name2.lower():
+                            x = module2(x)
+                            x = x.view(x.size(0), -1)
+                        else:
+                            x = module2(x)
             else:
                 if module == self.feature_module:
                     target_activations, x = self.feature_extractor(x)
@@ -145,6 +138,13 @@ class ModelOutputs():
                 elif "gap" in name.lower():
                     x = module(x)
                     x = x.view(x.size(0), -1)
+                elif "feat_bn" in name.lower() and self.name=='dense':
+                    x = torch.cat([x, x], dim=1)
+                    x = module(x)
+                    x = x.view(x.size(0), -1)
+                elif "feat_bn" in name.lower():
+                    x = module(x)
+                    x = x.view(x.size(0), -1)
                 else:
                     x = module(x)
 
@@ -152,7 +152,7 @@ class ModelOutputs():
 
 
 class GradCam:
-    def __init__(self, model, feature_module, target_layer_names, use_cuda):
+    def __init__(self, model, feature_module, target_layer_names, use_cuda, name=None, printly=False):
         self.model = model
         self.feature_module = feature_module
         self.model.eval()
@@ -160,7 +160,7 @@ class GradCam:
         if self.cuda:
             self.model = model.cuda()
 
-        self.extractor = ModelOutputs(self.model, self.feature_module, target_layer_names)
+        self.extractor = ModelOutputs(self.model, self.feature_module, target_layer_names, name=name, printly=printly)
 
     def forward(self, input_img):
         return self.model(input_img)
@@ -275,9 +275,14 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--use-cuda', action='store_true', default=False,
                         help='Use NVIDIA GPU acceleration')
-    parser.add_argument('--image-path', type=str, default='./gradcam/imgs/person1.jpg',
+    parser.add_argument('--image-path', type=str, default='./gradcam/imgs/market/0001_c1s1_001051_00.jpg',
                         help='Input image path')
-    parser.add_argument('--model', type=str, default='./gradcam/resnet_market.pth.tar')
+    # parser.add_argument('--image-path', type=str, default='./gradcam/imgs/imgs/person1.jpg',
+    #                     help='Input image path')
+    parser.add_argument('--res', type=str, default='./gradcam/resnet_market.pth.tar')
+    parser.add_argument('--den', type=str, default='./gradcam/densenet_market.pth.tar')
+    parser.add_argument('--incep', type=str, default='./gradcam/inceptionv3_market.pth.tar')
+    parser.add_argument('--printly', action='store_true')
     parser.add_argument('--gpu', type=int, default=0)
     args = parser.parse_args()
     args.use_cuda = args.use_cuda and torch.cuda.is_available()
@@ -299,7 +304,6 @@ def deprocess_image(img):
     img = np.clip(img, 0, 1)
     return np.uint8(img * 255)
 
-
 def main():
     """ python grad_cam.py <path_to_image>
        1. Loads an image with opencv.
@@ -307,27 +311,26 @@ def main():
        3. Makes a forward pass to find the category index with the highest score,
        and computes intermediate activations.
        Makes the visualization. """
-
-    chk_incep = './gradcam/inceptionv3_market.pth.tar'
-    chk_den = './gradcam/densenet_market.pth.tar'
-    chk_unet = './logs/unet_dukemtmc_market1501_resnet50_0.001_0.5_B_2021-04-08T03:54/checkpoint_79.pth.tar'
-
     sys.stdout = Logger(osp.join('./gradcam', 'gradcam_log.txt'))
     args = get_args()
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "{0}".format(args.gpu)
     args.use_cuda = True
 
-    # name = args.image_path
-    # name = name.split('/')
-    # name = name[-1]
-    # name = name[:-4]
-    # name = './gradcam/results/{0}'.format(name)
-
-    if args.model == None:
+    if args.res == None:
         chk_res = './gradcam/resnet_market.pth.tar'
     else:
-        chk_res = args.model
+        chk_res = args.res
+
+    if args.den == None:
+        chk_den = './gradcam/densenet_market.pth.tar'
+    else:
+        chk_den = args.den
+
+    if args.incep == None:
+        chk_incep = './gradcam/inceptionv3_market.pth.tar'
+    else:
+        chk_incep = args.incep
 
     if chk_res.find('market') > -1:
         dataset = 'market'
@@ -336,83 +339,147 @@ def main():
         dataset = 'duke'
         num_classes = 702
 
-    model_path = chk_res
+    name_res = chk_res.split('/')[-1].split('.')[0]
+    name_den = chk_den.split('/')[-1].split('.')[0]
+    name_incep = chk_incep.split('/')[-1].split('.')[0]
 
-    name = args.image_path
-    name = name.split('/')
-
-    img_type = name[-2]
-    name = name[-1]
-    name = name[:-4]
-
-    model_path = model_path.split('/')
-    model_path = model_path[-1]
-    model_path = model_path.split('.')
-    model_path = model_path[0]
-
-    dir_path = './gradcam/results_id/{img_type}_{model_path}'.format(
-        img_type=img_type, model_path=model_path)
-
-    os.makedirs(dir_path, exist_ok=True)
-    name = '{dir_path}/{name}'.format(
-        name=name, dir_path=dir_path)
-
-    # print(args.image_path)
-    img = cv2.imread(args.image_path, 1)
-
-    img_clone = img.copy()
-    img = np.float32(img) / 255
-
-    # Opencv loads as BGR:
-    img = img[:, :, ::-1]
-    input_img = preprocess_image(img)
-    resized_img = preprocess_image2(img_clone)
-
-    # If None, returns the map for the highest scoring category.
-    # Otherwise, targets the requested category.
-    target_category = None
-
-    # Create model
-
-    # Duke
+    ### Create model
+    #### ResNet
     model_res = meb_models.create("resnet50", num_features=0, dropout=0, num_classes=num_classes)
-
     checkpoint = load_checkpoint(chk_res)
     copy_state_dict(checkpoint['state_dict'], model_res)
-
-    grad_cam_res = GradCam(model=model_res, feature_module=model_res.base[6],
-                           target_layer_names=["2"], use_cuda=args.use_cuda)
     model_res.cuda()
+    grad_cam_res = GradCam(model=model_res, feature_module=model_res.base[6],
+                           target_layer_names=["2"], use_cuda=args.use_cuda, printly=args.printly)
 
-    grayscale_cam_res = grad_cam_res(input_img[0], target_category)
-    #########################
-    #########################
+    #### DenseNet3
+    model_den = meb_models.create("densenet", num_features=0, dropout=0, num_classes=num_classes)
+    checkpoint = load_checkpoint(chk_den)
+    copy_state_dict(checkpoint['state_dict'], model_den)
+    model_den.cuda()
+    grad_cam_den = GradCam(model=model_den, feature_module=model_den.base[0],
+                           target_layer_names=["denseblock3"], name='dense', use_cuda=args.use_cuda, printly=args.printly)
 
-    grayscale_cam_res = cv2.resize(grayscale_cam_res, (img.shape[1], img.shape[0]))
+    grad_cam_den4 = GradCam(model=model_den, feature_module=model_den.base[0],
+                           target_layer_names=["denseblock4"], name='dense', use_cuda=args.use_cuda, printly=args.printly)
 
-    pdb.set_trace()
-    cam = show_cam_on_image(img, grayscale_cam_res)
+    #### InceptionV3
+    model_incep = meb_models.create("inceptionv3", num_features=0, dropout=0, num_classes=num_classes)
+    checkpoint = load_checkpoint(chk_incep)
+    copy_state_dict(checkpoint['state_dict'], model_incep)
+    model_incep.cuda()
 
-    gb_model_res = GuidedBackpropReLUModel(model=model_res, use_cuda=args.use_cuda)
-    gb = gb_model_res(input_img, target_category=target_category)
-    gb = gb.transpose((1, 2, 0))
+    grad_cam_incep = GradCam(model=model_incep, feature_module=model_incep.base,
+                           target_layer_names=["16"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
 
-    cam_mask = cv2.merge([grayscale_cam_res, grayscale_cam_res, grayscale_cam_res])
-    cam_gb = deprocess_image(cam_mask * gb)
-    gb = deprocess_image(gb)
+    grad_cam_incep2 = GradCam(model=model_incep, feature_module=model_incep.base,
+                           target_layer_names=["17"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
 
-    # addh = cv2.createMat
-    # cv2.hconcat([input_img, cam, cam_gb, gb], addh)
+    grad_cam_incep3 = GradCam(model=model_incep, feature_module=model_incep.base,
+                           target_layer_names=["15"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
+
+    grad_cam_incep4 = GradCam(model=model_incep, feature_module=model_incep.base,
+                           target_layer_names=["14"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
+
+    if args.image_path.split('.')[-1].lower() == 'jpg':
+        img_names = args.image_path.split('/')[-1]
+    else:
+        img_names = os.listdir(args.image_path)
+
     # pdb.set_trace()
+    for img_name in img_names:
+        img_name = '{0}{1}'.format(args.image_path, img_name)
+        name = img_name.split('/')
 
-    addh = cv2.hconcat([img_clone, cam, cam_gb, gb])
+        img_type = name[-2]
+        name = name[-1]
+        name = name[:-4]
 
-    cv2.imwrite("{0}.jpg".format(name), addh)
-    print(' save {0}.jpg'.format(name))
+        dir_path = './gradcam/results_id/{img_type}_{name_res}_{name_den}_{name_incep}'.format(
+            img_type=img_type, name_res=name_res, name_den=name_den, name_incep=name_incep)
 
-    # cv2.imwrite("{0}_cam.jpg".format(name), cam)
-    # cv2.imwrite('{0}_gb.jpg'.format(name), gb)
-    # cv2.imwrite('{0}_cam_gb.jpg'.format(name), cam_gb)
+        os.makedirs(dir_path, exist_ok=True)
+        name = '{dir_path}/{name}'.format(
+            name=name, dir_path=dir_path)
+
+        img = cv2.imread(img_name, 1)
+        # img = cv2.resize(img, dsize=(0, 0), fx=2, fy=2,
+        #                  interpolation=cv2.INTER_LINEAR)
+
+        img = cv2.resize(img, (128, 256), interpolation=cv2.INTER_LINEAR)
+        img_clone = img.copy()
+        img = np.float32(img) / 255
+
+        # Opencv loads as BGR:
+        img = img[:, :, ::-1]
+        input_img = preprocess_image(img)
+
+        # If None, returns the map for the highest scoring category.
+        # Otherwise, targets the requested category.
+        target_category = None
+
+        grayscale_cam_incep = grad_cam_incep(input_img[0], target_category)
+        grayscale_cam_incep = cv2.resize(grayscale_cam_incep, (img.shape[1], img.shape[0]))
+        cam_incep = show_cam_on_image(img, grayscale_cam_incep)
+
+        grayscale_cam_incep2 = grad_cam_incep2(input_img[0], target_category)
+        grayscale_cam_incep2 = cv2.resize(grayscale_cam_incep2, (img.shape[1], img.shape[0]))
+        cam_incep2 = show_cam_on_image(img, grayscale_cam_incep2)
+
+        grayscale_cam_incep3 = grad_cam_incep3(input_img[0], target_category)
+        grayscale_cam_incep3 = cv2.resize(grayscale_cam_incep3, (img.shape[1], img.shape[0]))
+        cam_incep3 = show_cam_on_image(img, grayscale_cam_incep3)
+
+        grayscale_cam_incep4 = grad_cam_incep4(input_img[0], target_category)
+        grayscale_cam_incep4 = cv2.resize(grayscale_cam_incep4, (img.shape[1], img.shape[0]))
+        cam_incep4 = show_cam_on_image(img, grayscale_cam_incep4)
+
+        grayscale_cam_res = grad_cam_res(input_img[0], target_category)
+        grayscale_cam_res = cv2.resize(grayscale_cam_res, (img.shape[1], img.shape[0]))
+        cam_res = show_cam_on_image(img, grayscale_cam_res)
+
+        grayscale_cam_den = grad_cam_den(input_img[0], target_category)
+        grayscale_cam_den = cv2.resize(grayscale_cam_den, (img.shape[1], img.shape[0]))
+        cam_den = show_cam_on_image(img, grayscale_cam_den)
+
+        grayscale_cam_den4 = grad_cam_den4(input_img[0], target_category)
+        grayscale_cam_den4 = cv2.resize(grayscale_cam_den4, (img.shape[1], img.shape[0]))
+        cam_den4 = show_cam_on_image(img, grayscale_cam_den4)
+
+        addh = cv2.hconcat([img_clone, cam_res, cam_den,
+                            cam_den4, cam_incep, cam_incep2,
+                            cam_incep3, cam_incep4
+                            ])
+
+        cv2.imwrite("{0}.jpg".format(name), addh)
+        print(' save {0}.jpg'.format(name))
+        #########################
+        #########################
+
+        # pdb.set_trace()
+        #
+        # out_res = model_res(input_img[0].cuda())
+        # out_den = model_den(input_img[0].cuda())
+        # out_incep = model_incep(input_img[0].cuda())
+
+        # gb_model_res = GuidedBackpropReLUModel(model=model_res, use_cuda=args.use_cuda)
+        # gb = gb_model_res(input_img, target_category=target_category)
+        # gb = gb.transpose((1, 2, 0))
+        #
+        # cam_mask = cv2.merge([grayscale_cam_res, grayscale_cam_res, grayscale_cam_res])
+        # cam_gb = deprocess_image(cam_mask * gb)
+        # gb = deprocess_image(gb)
+        #
+        # addh = cv2.hconcat([img_clone, cam_res, cam_gb, gb])
+
+        # cv2.imwrite("{0}.jpg".format(name), addh)
+        # print(' save {0}.jpg'.format(name))
+
+        # cv2.imwrite("{0}_cam.jpg".format(name), cam)
+        # cv2.imwrite('{0}_gb.jpg'.format(name), gb)
+        # cv2.imwrite('{0}_cam_gb.jpg'.format(name), cam_gb)
+        #########################
+        #########################
 
 
 if __name__ == '__main__':

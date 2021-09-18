@@ -25,7 +25,10 @@ if [ ${gpu} -eq "0" ]
 #################
 #################
 
-    AE_set='./logs/__unet/_unet_0501_dtom/unet_dukemtmc_market1501_resnet50_F_0.005* ./logs/__unet/_unet_0501_dtom/unet_dukemtmc_market1501_resnet50_F_0.010*'
+    logsdir='./logs/_pretrain_duke_unet0615_ID_0616'
+
+    AE_set='./logs/__unet/_unet_0615_mtod_ID/unet_market1501_dukemtmc_resnet50_F_0.001_0.5_0.0000_0.0700_2021-06-16T04:07'
+    arch_set='resnet50'
 
     for AEtransfer in ${AE_set}
     do
@@ -34,10 +37,58 @@ if [ ${gpu} -eq "0" ]
         python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
           --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
 	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
-	        --logs-dir ./logs/_pretrain_duke_arg2_0604 \
+	        --logs-dir ${logsdir} \
 	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
       done
     done
+
+    AE_set='./logs/__unet/_unet_0615_mtod_ID/unet_market1501_dukemtmc_inceptionv3_F_0.001_0.5_0.0000_0.0700_2021-06-15T21:21'
+    arch_set='inceptionv3'
+
+    for AEtransfer in ${AE_set}
+    do
+      for arch in ${arch_set}
+      do
+        python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
+          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
+	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
+	        --logs-dir ${logsdir} \
+	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
+      done
+    done
+
+    AE_set='./logs/__unet/_unet_0615_mtod_ID/unet_market1501_dukemtmc_densenet_F_0.001_0.5_0.0000_0.0700_2021-06-15T14:42'
+    arch_set='densenet'
+
+    for AEtransfer in ${AE_set}
+    do
+      for arch in ${arch_set}
+      do
+        python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
+          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
+	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
+	        --logs-dir ${logsdir} \
+	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
+      done
+    done
+
+#################
+#################
+
+#    AE_set='./logs/__unet/_unet_0501_dtom/unet_dukemtmc_market1501_resnet50_F_0.005* ./logs/__unet/_unet_0501_dtom/unet_dukemtmc_market1501_resnet50_F_0.010*'
+#    logsdir='./logs/_pretrain_duke_arg2_0604'
+#
+#    for AEtransfer in ${AE_set}
+#    do
+#      for arch in ${arch_set}
+#      do
+#        python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
+#          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
+#	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
+#	        --logs-dir ${logsdir} \
+#	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
+#      done
+#    done
 
 #################
     pass
@@ -46,19 +97,52 @@ if [ ${gpu} -eq "0" ]
 
 #################
 #################
-     AE_set='./logs/__unet/_unet_0528_mtod/*'
 
-    for arch in ${arch_set}
+    arch_set='densenet'
+    AE_set='./logs/__unet/_unet_0613_mtod_ID/unet_market1501_dukemtmc_densenet_*'
+    logsdir='./logs/__pretrain/_pretrain_duke_unet0613_ID_0621'
+
+    for AEtransfer in ${AE_set}
     do
-      for AEtransfer in ${AE_set}
+      for arch in ${arch_set}
       do
-        python3 main/source_pretrain.py -ds market1501 -dt dukemtmc -a ${arch} --gpu ${gpu}\
-          --margin 0.0 --num-instances 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 \
+        python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
+          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
 	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
+	        --logs-dir ${logsdir} \
 	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
       done
     done
 
+    arch_set='inceptionv3'
+    AE_set='./logs/__unet/_unet_0613_mtod_ID/unet_market1501_dukemtmc_inceptionv3_*'
+
+    for AEtransfer in ${AE_set}
+    do
+      for arch in ${arch_set}
+      do
+        python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
+          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
+	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
+	        --logs-dir ${logsdir} \
+	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
+      done
+    done
+
+    arch_set='resnet50'
+    AE_set='./logs/__unet/_unet_0613_mtod_ID/unet_market1501_dukemtmc_resnet50_*'
+
+    for AEtransfer in ${AE_set}
+    do
+      for arch in ${arch_set}
+      do
+        python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
+          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
+	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
+	        --logs-dir ${logsdir} \
+	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
+      done
+    done
 
 #################
 #################
@@ -90,21 +174,6 @@ if [ ${gpu} -eq "0" ]
   elif [ ${gpu} -eq "2" ]
   then
 
-#################
-#################
-    AE_set=' ./logs/__unet/_unet_0501_dtom/unet_dukemtmc_market1501_resnet50_F_0.001*'
-
-    for AEtransfer in ${AE_set}
-    do
-      for arch in ${arch_set}
-      do
-        python3 main/source_pretrain.py -ds dukemtmc -dt market1501 -a ${arch} --gpu ${gpu}\
-          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.00035 \
-	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
-	        --logs-dir ./logs/_pretrain_duke_arg1_0604 \
-	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
-      done
-    done
 
 #################
     pass

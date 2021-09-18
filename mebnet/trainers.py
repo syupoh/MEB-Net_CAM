@@ -13,6 +13,12 @@ from .utils.meters import AverageMeter
 from torch.autograd import Variable
 import numpy as np
 
+
+import cv2
+from torchvision import transforms as T
+
+# import os
+
 # class Trainer_Unet(object):
 #     def __init__(self, model, args):
 #         super(Trainer_Unet, self).__init__()
@@ -204,6 +210,174 @@ import numpy as np
 #         return inputs, targets
 
 
+def preprocess_image(img):
+    normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+    preprocessing = T.Compose([
+        # T.ToPILImage(),
+        # T.Resize((256, 128), interpolation=3),
+        T.ToTensor(),
+        normalize,
+    ])
+
+    return preprocessing(img.copy()).unsqueeze(0),
+
+
+def show_cam_on_image(img, mask):
+    heatmap = cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_JET)
+    heatmap = np.float32(heatmap) / 255
+    cam = heatmap + np.float32(img)
+    cam = cam / np.max(cam)
+    return np.uint8(255 * cam)
+
+# class FeatureExtractor():
+#     """ Class for extracting activations and
+#     registering gradients from targetted intermediate layers """
+#
+#     def __init__(self, model, target_layers, printly):
+#         self.model = model
+#         self.target_layers = target_layers
+#         self.gradients = []
+#         self.print = printly
+#
+#     def save_gradient(self, grad):
+#         self.gradients.append(grad)
+#
+#     def __call__(self, x):
+#         outputs = []
+#         self.gradients = []
+#
+#         for name, module in self.model._modules.items():
+#             if self.print:
+#                 print('  ' + name)
+#             x = module(x)
+#             if name in self.target_layers:
+#                 x.register_hook(self.save_gradient)
+#                 outputs += [x]
+#
+#         return outputs, x
+#
+#
+# class ModelOutputs():
+#     """ Class for making a forward pass, and getting:
+#     1. The network output.
+#     2. Activations from intermeddiate targetted layers.
+#     3. Gradients from intermeddiate targetted layers. """
+#
+#     def __init__(self, model, feature_module, target_layers, name=None, printly=False):
+#         self.model = model
+#         self.feature_module = feature_module
+#         self.feature_extractor = FeatureExtractor(self.feature_module, target_layers, printly)
+#         self.name = name
+#
+#         self.target_layers = target_layers
+#         self.print = printly
+#         if self.print:
+#             print(target_layers)
+#
+#     def get_gradients(self):
+#         return self.feature_extractor.gradients
+#
+#     def __call__(self, x):
+#         target_activations = []
+#         for name, module in self.model._modules.items():
+#
+#             if self.print:
+#                 print(name)
+#             # print(module)
+#
+#             if name == 'base':
+#                 if self.name == 'incep':
+#                     target_activations, x = self.feature_extractor(x)
+#                 else:
+#                     for name2, module2 in module._modules.items():
+#                         if self.print:
+#                             print(' ' + name2)
+#
+#                         if module2 == self.feature_module:
+#                             target_activations, x = self.feature_extractor(x)
+#                         elif "avgpool" in name2.lower():
+#                             x = module2(x)
+#                             x = x.view(x.size(0), -1)
+#                         elif "gap" in name2.lower():
+#                             x = module2(x)
+#                             x = x.view(x.size(0), -1)
+#                         else:
+#                             x = module2(x)
+#             else:
+#                 if module == self.feature_module:
+#                     target_activations, x = self.feature_extractor(x)
+#                 elif "avgpool" in name.lower():
+#                     x = module(x)
+#                     x = x.view(x.size(0), -1)
+#                 elif "gap" in name.lower():
+#                     x = module(x)
+#                     x = x.view(x.size(0), -1)
+#                 elif "feat_bn" in name.lower() and self.name=='dense':
+#                     x = torch.cat([x, x], dim=1)
+#                     x = module(x)
+#                     x = x.view(x.size(0), -1)
+#                 elif "feat_bn" in name.lower():
+#                     x = module(x)
+#                     x = x.view(x.size(0), -1)
+#                 else:
+#                     x = module(x)
+#
+#         return target_activations, x
+#
+#
+# class GradCam:
+#     def __init__(self, model, feature_module, target_layer_names, use_cuda, name=None, printly=False):
+#         self.model = model
+#         self.feature_module = feature_module
+#         self.model.eval()
+#         self.cuda = use_cuda
+#         if self.cuda:
+#             self.model = model.cuda()
+#
+#         self.extractor = ModelOutputs(self.model, self.feature_module, target_layer_names, name=name, printly=printly)
+#
+#     def forward(self, input_img):
+#         return self.model(input_img)
+#
+#     def __call__(self, input_img, target_category=None):
+#         if self.cuda:
+#             input_img = input_img.cuda()
+#
+#         features, output = self.extractor(input_img)
+#
+#         if target_category == None:
+#             target_category = np.argmax(output.cpu().data.numpy())
+#
+#         one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
+#         one_hot[0][target_category] = 1
+#         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
+#         if self.cuda:
+#             one_hot = one_hot.cuda()
+#
+#         one_hot = torch.sum(one_hot * output)
+#
+#         self.feature_module.zero_grad()
+#         self.model.zero_grad()
+#         one_hot.backward(retain_graph=True)
+#
+#         grads_val = self.extractor.get_gradients()[-1].cpu().data.numpy()
+#
+#         target = features[-1]
+#         target = target.cpu().data.numpy()[0, :]
+#
+#         weights = np.mean(grads_val, axis=(2, 3))[0, :]
+#         cam = np.zeros(target.shape[1:], dtype=np.float32)
+#
+#         for i, w in enumerate(weights):
+#             cam += w * target[i, :, :]
+#
+#         cam = np.maximum(cam, 0)
+#         cam = cv2.resize(cam, input_img.shape[2:])
+#         cam = cam - np.min(cam)
+#         cam = cam / np.max(cam)
+#         return cam
+
 def compute_gradient_penalty(D, real_samples, fake_samples):
     Tensor = torch.cuda.FloatTensor
     """Calculates the gradient penalty loss for WGAN GP"""
@@ -227,35 +401,58 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
     return gradient_penalty
 
 class Trainer_Unet(object):
-    def __init__(self, model, args):
+    def __init__(self, model, args, grayscale_cam_id=None):
         super(Trainer_Unet, self).__init__()
         self.model_unet = model[0]
         self.model_d = model[1]
         self.criterion_mse = nn.MSELoss().cuda()
         self.criterion_bce = nn.BCELoss().cuda()
-        self.criterion_bce2 = nn.BCEWithLogitsLoss().cuda()
+        self.criterion_bce2 = nn.BCEWithLogitsLoss().cuda() # This loss combines a Sigmoid layer and BCELoss in one single class
         self.batch_size = args.batch_size
         self.type = args.type
 
         self.alpha = args.alpha
         self.beta = args.beta
         self.gamma = args.gamma
+        self.delta = args.delta
+
+        self.height = args.height
+        self.width = args.width
 
         Tensor = torch.cuda.FloatTensor
         valid = Variable(Tensor(args.batch_size, 3, args.height, args.width).fill_(1.0), requires_grad=False)
         tempout = self.model_d(valid)
         self.valid_size = tempout.shape
         self.valid_size2 = self.model_d.output_shape
+        self.gradcam = grayscale_cam_id
 
         # print(self.valid_size)
         # print(tempout[1].shape)
         # print(self.valid_size2)
+
+        # img = cv2.imread(img_name, 1)
+        # img = cv2.resize(img, (128, 256), interpolation=cv2.INTER_LINEAR)
+        # img_clone = img.copy()
+        # img = np.float32(img) / 255
+        #
+        # # Opencv loads as BGR:
+        # img = img[:, :, ::-1]
+        # input_img = preprocess_image(img)
+        #
+        # # If None, returns the map for the highest scoring category.
+        # # Otherwise, targets the requested category.
+        # target_category = None
+        #
+        # grayscale_cam_id = grad_cam_res(input_img[0], target_category)
+        # grayscale_cam_id = cv2.resize(grayscale_cam_id, (img.shape[1], img.shape[0]))
+        # # cam_res = show_cam_on_image(img, grayscale_cam_id)
 
     def train(self, epoch, data_loader_source, data_loader_target,
               optimizer, train_iters=200, print_freq=1, alpha=0.001, beta=1):
         alpha = self.alpha
         beta = self.beta
         gamma = self.gamma
+        delta = self.delta
 
         self.model_unet.train()
         self.model_d.train()
@@ -289,7 +486,7 @@ class Trainer_Unet(object):
             s_inputs, targets = self._parse_data(source_inputs)
 
             target_inputs = data_loader_target.next()
-            t_inputs, _ = self._parse_data(target_inputs)
+            t_inputs, t_targets = self._parse_data(target_inputs)
 
             # -----------------
             #  Train Generator
@@ -311,6 +508,17 @@ class Trainer_Unet(object):
             # loss_G.backward()
             # optimizer_G.step()
             #########################################
+
+            if self.gradcam is not None:
+                for jk in range(len(t_inputs)):
+                    mask = self.gradcam(t_inputs[jk].unsqueeze(0), t_targets[jk].cpu().numpy())
+                    mask = torch.from_numpy(mask).reshape(t_inputs[jk].shape[1], t_inputs[jk].shape[2]).cuda()
+
+                    # sum(sum((mask >= 0.0001).to(torch.int)))
+                    # sum(sum((mask > 0).to(torch.int)))
+                    mask = (mask * (mask <= delta).to(torch.float32)) + (mask > delta).to(torch.float32)
+
+                    t_inputs[jk] = t_inputs[jk] * (mask > delta).to(torch.float32)
 
             optimizerG.zero_grad()
 
@@ -388,7 +596,6 @@ class Trainer_Unet(object):
             t_inputs_val = self.model_d(t_inputs)
             s_inputs_val = self.model_d(s_inputs)
             t_outputs_val = self.model_d(t_outputs.detach())
-
 
             if self.type == 'A':
                 loss_r = self.criterion_bce2(s_inputs_val, valid)

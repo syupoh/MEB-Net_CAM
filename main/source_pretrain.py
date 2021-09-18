@@ -163,6 +163,7 @@ def main_worker(args):
     #    ./logs/_before_0501_typeF/unet_dukemtmc_market1501_resnet50_F_0.050_0.5_0.0100_2021-05-01T07:43/checkpoint_79.pth.tar \
     #    ./logs/_before_0501_typeF/unet_dukemtmc_market1501_resnet50_F_0.010_0.5_0.0200_2021-05-01T06:56/checkpoint_79.pth.tar'
 
+    model_unet = None
     if args.AEtransfer:
         model_unet = models.create("UNetAuto", num_channels=3,
                                    batch_size=args.batch_size, max_features=1024)
@@ -186,7 +187,7 @@ def main_worker(args):
         trainer.train(epoch, train_loader_source, train_loader_target, optimizer,
                     train_iters=len(train_loader_source), print_freq=args.print_freq)
         lr_scheduler.step()
-        print(' {0:.3f} seconds'.format(time.time() - start))
+        print(' {0:.3f} seconds \n{1}'.format(time.time() - start, args.logs_dir))
 
         if ((epoch+1)%args.eval_step==0 or (epoch==args.epochs-1)):
             start = time.time()

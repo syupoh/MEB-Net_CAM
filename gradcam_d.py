@@ -16,6 +16,7 @@ from mebnet import models as meb_models
 from mebnet.utils.serialization import load_checkpoint, save_checkpoint, copy_state_dict
 from mebnet.utils.logging import Logger
 
+sys.path.insert(0, os.getcwd())
 
 def preprocess_image(img):
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406],

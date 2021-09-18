@@ -11,6 +11,7 @@ import cv2
 from PIL import Image
 
 sys.path.insert(0, os.getcwd())
+sys.path.insert(0, '../')
 import torch
 from torch import nn
 from torch.backends import cudnn
@@ -29,6 +30,7 @@ from mebnet.utils.logging import Logger
 from mebnet.utils.serialization import load_checkpoint, save_checkpoint, copy_state_dict
 from mebnet.utils.lr_scheduler import WarmupMultiStepLR
 import torchvision.utils as v_utils
+from gradcam_id import show_cam_on_image, GradCam, FeatureExtractor, ModelOutputs
 
 import pdb
 
@@ -86,9 +88,9 @@ def get_data(name, args, num_instances, iters=200):
 
     train_transformer = T.Compose([
         T.Resize((height, width), interpolation=3),
-        T.RandomHorizontalFlip(p=0.5),
-        T.Pad(10),
-        T.RandomCrop((height, width)),
+        # T.RandomHorizontalFlip(p=0.5),
+        # T.Pad(10),
+        # T.RandomCrop((height, width)),
         T.ToTensor(),
         normalizer
     ])
@@ -150,7 +152,6 @@ def main_worker(args):
     global start_epoch, best_mAP
 
     cudnn.benchmark = True
-
 
     # from torchsummary import summary
     # summary(model_pre, input_size=(3, 256, 128))
@@ -222,10 +223,9 @@ def main_worker(args):
 
         return
 
-
-    prefix = "{src}_{tgt}_{arch}_{type}_{alpha:.3f}_{beta:.1f}_{lr2:.4f}_{time}".format(
+    prefix = "{src}_{tgt}_{arch}_{type}_{alpha:.3f}_{beta:.1f}_{delta:.4f}_{lr2:.4f}_{time}".format(
         src=args.dataset_source, tgt=args.dataset_target, type=args.type,
-        arch=args.arch, alpha=args.alpha, beta=args.beta, lr2=args.lr2, time=curtime[0:16]
+        arch=args.arch, alpha=args.alpha, beta=args.beta, delta=args.delta, lr2=args.lr2, time=curtime[0:16]
     )
     if args.prefix is not '':
         prefix = "{0}_{1}".format(
@@ -249,12 +249,47 @@ def main_worker(args):
     dataset_source, num_classes, train_loader_source, test_loader_source = \
         get_data(args.dataset_source, args, args.num_instances, iters)
 
-    dataset_target, _, train_loader_target, test_loader_target = \
+    dataset_target, num_classes_t, train_loader_target, test_loader_target = \
         get_data(args.dataset_target, args, 0, iters)
+
+    if args.arch_resume:
+        # model_res = meb_models.create("resnet50", num_features=0, dropout=0, num_classes=num_classes)
+        model_id = models.create(args.arch, num_features=0, dropout=0, num_classes=num_classes_t)
+
+        checkpoint = load_checkpoint(args.arch_resume)
+        copy_state_dict(checkpoint['state_dict'], model_id)
+        model_id.cuda()
+
+        if args.arch == "resnet50":
+            grayscale_cam_id = GradCam(model=model_id, feature_module=model_id.base[6],
+                                   target_layer_names=["2"], use_cuda=True, printly=args.printly)
+        elif args.arch == "densenet":
+            # model_id = GradCam(model=model_id, feature_module=model_id.base[0],
+            #                        target_layer_names=["denseblock3"], name='dense', use_cuda=True,
+            #                        printly=args.printly)
+
+            grayscale_cam_id = GradCam(model=model_id, feature_module=model_id.base[0],
+                                    target_layer_names=["denseblock4"], name='dense', use_cuda=True,
+                                    printly=args.printly)
+        elif args.arch == "inceptionv3":
+            # model_id = GradCam(model=model_id, feature_module=model_id.base,
+            #                          target_layer_names=["16"], name='incep', use_cuda=True, printly=args.printly)
+
+            grayscale_cam_id = GradCam(model=model_id, feature_module=model_id.base,
+                                      target_layer_names=["17"], name='incep', use_cuda=True, printly=args.printly)
+
+            # model_id = GradCam(model=model_id, feature_module=model_id.base,
+            #                           target_layer_names=["15"], name='incep', use_cuda=True, printly=args.printly)
+            #
+            # model_id = GradCam(model=model_id, feature_module=model_id.base,
+            #                           target_layer_names=["14"], name='incep', use_cuda=True, printly=args.printly)
+    else:
+        grayscale_cam_id = None
 
     model_unet = models.create("UNetAuto", num_channels=3,
                                batch_size=args.batch_size, max_features=1024)
     model_unet.cuda()
+
     model_d = models.create("Discriminator")
     model_d.cuda()
 
@@ -285,15 +320,15 @@ def main_worker(args):
 
     optimizer = [optimizer_G, optimizer_D]
     model2 = [model_unet, model_d]
+
     # Trainer
-
-
-    trainer_unet = Trainer_Unet(model2, args)
+    trainer_unet = Trainer_Unet(model2, args, grayscale_cam_id)
 
     # from torchsummary import summary
     # summary(model_unet, input_size=(3, 224, 256))
 
     print('---------- Training Start ----------')
+
     # Start training
 
     print(args.logs_dir)
@@ -307,12 +342,20 @@ def main_worker(args):
         train_loader_target.new_epoch()
         start = time.time()
 
+        # pdb.set_trace()
+        # source_inputs = train_loader_target.next()
+        # s_inputs, targets = trainer_unet._parse_data(source_inputs)
+        # s_inputs2 = s_inputs[0].unsqueeze(0)
+
+        # grayscale_cam_id(s_inputs, None)
+
         trainer_unet.train(epoch, train_loader_source, train_loader_target, optimizer,
                       train_iters=len(train_loader_source), print_freq=args.print_freq,
                            alpha=args.alpha, beta=args.beta)
 
         lr_scheduler_G.step()
         lr_scheduler_D.step()
+
         print(' {0:.3f} seconds \n{1}'.format(time.time() - start, args.logs_dir))
 
         with torch.no_grad():
@@ -348,8 +391,6 @@ def main_worker(args):
 
             print(' {0:.3f} seconds'.format(time.time() - start))
 
-
-
     print('---------------Training End------------')
 
     # print("Test on target domain:")
@@ -364,13 +405,14 @@ def main_worker(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Pre-training on the source domain")
+
     # data
-    parser.add_argument('-ds', '--dataset-source', type=str, default='market1501',
+    parser.add_argument('-ds', '--dataset-source', type=str, default='dukemtmc',
                         choices=datasets.names())
-    parser.add_argument('-dt', '--dataset-target', type=str, default='dukemtmc',
+    parser.add_argument('-dt', '--dataset-target', type=str, default='market1501',
                         choices=datasets.names())
     parser.add_argument('--prefix', type=str, default='')
-    parser.add_argument('-b', '--batch-size', type=int, default=32)
+    parser.add_argument('-b', '--batch-size', type=int, default=8)
     parser.add_argument('-j', '--workers', type=int, default=1)
     parser.add_argument('--height', type=int, default=256, help="input height")
     parser.add_argument('--width', type=int, default=128, help="input width")
@@ -383,9 +425,11 @@ if __name__ == '__main__':
     # model
     parser.add_argument('-a', '--arch', type=str, default='resnet50',
                         choices=models.names())
+    parser.add_argument('--arch-resume', type=str, default=None, metavar='PATH')
     parser.add_argument('--features', type=int, default=0)
     parser.add_argument('--dropout', type=float, default=0)
-    parser.add_argument('--type', type=str, default='B')
+    parser.add_argument('--type', type=str, default='F')
+
     # optimizer
     parser.add_argument('--lr', type=float, default=0.00035,
                         help="learning rate of new parameters, for pretrained ")
@@ -394,12 +438,14 @@ if __name__ == '__main__':
     parser.add_argument('--alpha', type=float, default=0.001)
     parser.add_argument('--beta', type=float, default=0.5)
     parser.add_argument('--gamma', type=float, default=0.5)
+    parser.add_argument('--delta', type=float, default=0.5)
 
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     parser.add_argument('--warmup-step', type=int, default=10)
     parser.add_argument('--milestones', nargs='+', type=int, default=[40, 70],
                         help='milestones for the learning rate decay')
+
     # training configs
     parser.add_argument('--gpu', type=int, default='0',
                         help='gpu_ids: e.g. 0  0,1,2  0,2')
@@ -414,6 +460,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--print-freq', type=int, default=10)
     parser.add_argument('--margin', type=float, default=0.0, help='margin for the triplet loss with batch hard')
+
     # path
     working_dir = osp.dirname(osp.abspath(__file__))
     parser.add_argument('--data-dir', type=str, metavar='PATH',
@@ -423,4 +470,5 @@ if __name__ == '__main__':
     # default=osp.join(os.getcwd(), 'data'))
     parser.add_argument('--logs-dir', type=str, metavar='PATH',
                         default=osp.join(os.getcwd(), 'logs'))
+    parser.add_argument('--printly', action='store_true')
     main()

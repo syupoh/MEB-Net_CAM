@@ -15,6 +15,7 @@ from mebnet import models as meb_models
 from mebnet.utils.serialization import load_checkpoint, save_checkpoint, copy_state_dict
 from mebnet.utils.logging import Logger
 
+sys.path.insert(0, os.getcwd())
 
 def preprocess_image(img):
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406],
@@ -199,7 +200,9 @@ class GradCam:
         cam = np.maximum(cam, 0)
         cam = cv2.resize(cam, input_img.shape[2:])
         cam = cam - np.min(cam)
-        cam = cam / np.max(cam)
+
+        if np.max(cam) != 0:
+            cam = cam / np.max(cam)
         return cam
 
 
@@ -381,13 +384,15 @@ def main():
                            target_layer_names=["14"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
 
     if args.image_path.split('.')[-1].lower() == 'jpg':
-        img_names = args.image_path.split('/')[-1]
+        img_names = [args.image_path.split('/')[-1]]
     else:
         img_names = os.listdir(args.image_path)
 
-    # pdb.set_trace()
     for img_name in img_names:
-        img_name = '{0}{1}'.format(args.image_path, img_name)
+        if os.path.isdir(args.image_path):
+            img_name = '{0}{1}'.format(args.image_path, img_name)
+        else:
+            img_name = '{0}'.format(args.image_path)
         name = img_name.split('/')
 
         img_type = name[-2]
@@ -411,6 +416,7 @@ def main():
 
         # Opencv loads as BGR:
         img = img[:, :, ::-1]
+
         input_img = preprocess_image(img)
 
         # If None, returns the map for the highest scoring category.
@@ -445,6 +451,7 @@ def main():
         grayscale_cam_den4 = cv2.resize(grayscale_cam_den4, (img.shape[1], img.shape[0]))
         cam_den4 = show_cam_on_image(img, grayscale_cam_den4)
 
+        pdb.set_trace()
         addh = cv2.hconcat([img_clone, cam_res, cam_den,
                             cam_den4, cam_incep, cam_incep2,
                             cam_incep3, cam_incep4

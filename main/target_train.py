@@ -208,7 +208,7 @@ def main_worker(args):
     clusters = [args.num_clusters]*args.epochs
     feature_length = args.features if args.features>0 else 2048
     moving_avg_features = np.zeros((len(dataset_target.train), feature_length))
-    pdb.set_trace()
+    # pdb.set_trace()
     print('---------- Training Start ----------')
     print(args.logs_dir)
     for nc in range(start_epoch, len(clusters)):
@@ -228,13 +228,11 @@ def main_worker(args):
                 scatter_i = J_scatter(cf_i, labels_i)
                 scatter.append(scatter_i)
 
-        print(' {0:.3f} seconds'.format(time.time() - start))
+        print(' {0:.3f} seconds \n{1}'.format(time.time() - start, args.logs_dir))
+
         if not args.scatter:
-            scatter = [1,1,1]
+            scatter = [1, 1, 1]
         print("J Scatter of teachers on the target domain: {}".format(scatter))
-
-        # import pdb;pdb.set_trace()
-
 
         cf_avg = np.zeros_like(cf[0])
 
@@ -245,8 +243,6 @@ def main_worker(args):
         moving_avg_features = moving_avg_features*args.moving_avg_momentum+cf*(1-args.moving_avg_momentum)
         moving_avg_features = moving_avg_features / (1-args.moving_avg_momentum**(nc+1))
         
-
-        # import pdb;pdb.set_trace()
         print('\n Clustering into {} classes \n'.format(clusters[nc]))
         # km = KMeans(n_clusters=clusters[nc], random_state=args.seed, n_jobs=2).fit(moving_avg_features)
         km = MiniBatchKMeans(n_clusters=clusters[nc], max_iter=100, batch_size=100, init_size=1500).fit(moving_avg_features)
@@ -298,7 +294,7 @@ def main_worker(args):
                 'state_dict': model_ema.state_dict(),
                 'epoch': epoch + 1,
                 'best_mAP': best_mAP,
-            }, is_best, fpath=osp.join(args.logs_dir, 'model'+str(mid)+'_checkpoint.pth.tar'))
+            }, is_best, fpath=osp.join(args.logs_dir, 'model' + str(mid) + '_checkpoint.pth.tar'))
 
         if ((epoch+1)%args.eval_step==0 or (epoch==args.epochs-1)):
             start = time.time()
@@ -319,7 +315,7 @@ def main_worker(args):
                   format(epoch=epoch, map1=mAP[0], map2=mAP[1], map3=mAP[2],
                          best=best_mAP, isbest=' *' if is_best else ''))
 
-            print(' {0:.3f} seconds'.format(time.time() - start))
+            print(' {0:.3f} seconds \n{1}'.format(time.time() - start, args.logs_dir))
 
     print('---------------Training End------------')
     print ('Test on the best model.')
