@@ -6,7 +6,6 @@ import torch
 from torch.autograd import Function
 from torchvision import models
 from torchvision import transforms as T
-import torchvision.utils as v_utils
 from tqdm import tqdm
 
 import pdb
@@ -40,7 +39,6 @@ def deprocess_image(img):
     img = img + 0.5
     img = np.clip(img, 0, 1)
     return np.uint8(img * 255)
-
 # def preprocess_image2(img):
 #     Tresize = T.Compose([
 #         T.ToPILImage(),
@@ -65,34 +63,6 @@ def show_cam_on_image(img, mask):
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
 
-
-def masking(input, img, mask, target):
-    grayscale_cam = mask(input, target)
-    grayscale_cam = cv2.resize(grayscale_cam, (img.shape[1], img.shape[0]))
-    cam = show_cam_on_image(img, grayscale_cam)
-    cam_tensor = torch.from_numpy(cam.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-
-    # cam_tensor = 255 - cam_tensor
-
-    input = input.cuda()
-    mask_cam = torch.from_numpy(grayscale_cam).reshape(input.shape[2], input.shape[3]).cuda()
-    mask_cam = (mask_cam * (mask_cam <= 0.5).to(torch.float32)) + (mask_cam > 0.5).to(torch.float32)
-    input_mask = input * (mask_cam > 0.5).to(torch.float32)
-
-    return cam_tensor, input_mask.cpu()
-
-
-# if self.gradcam is not None:
-#     for jk in range(len(t_inputs)):
-#         mask = self.gradcam(t_inputs[jk].unsqueeze(0), t_targets[jk].cpu().numpy())
-#         mask = torch.from_numpy(mask).reshape(t_inputs[jk].shape[1], t_inputs[jk].shape[2]).cuda()
-#
-#         # sum(sum((mask >= 0.0001).to(torch.int)))
-#         # sum(sum((mask > 0).to(torch.int)))
-#         mask = (mask * (mask <= delta).to(torch.float32)) + (mask > delta).to(torch.float32)
-#
-#         t_inputs[jk] = t_inputs[jk] * (mask > delta).to(torch.float32)
-#
 
 class FeatureExtractor():
     """ Class for extracting activations and
@@ -194,13 +164,11 @@ class ModelOutputs():
 
 
 class GradCam:
-    def __init__(self, model, feature_module, target_layer_names, use_cuda, onehot=None, name=None, printly=False):
+    def __init__(self, model, feature_module, target_layer_names, use_cuda, name=None, printly=False):
         self.model = model
         self.feature_module = feature_module
         self.model.eval()
         self.cuda = use_cuda
-        self.onehot = onehot
-
         if self.cuda:
             self.model = model.cuda()
 
@@ -225,11 +193,7 @@ class GradCam:
                 one_hot = np.ones((output.size()), dtype=np.float32)
             else:
                 one_hot = np.zeros((output.size()), dtype=np.float32)
-            if self.onehot is not None:
-                if self.onehot == 0:
-                    one_hot = np.zeros((output.size()), dtype=np.float32)
-                if self.onehot == 1:
-                    one_hot = np.ones((output.size()), dtype=np.float32)
+            one_hot = np.ones((output.size()), dtype=np.float32)
             # valid = Variable(Tensor(output.size()).fill_(1.0), requires_grad=False)
         else:
             if target_category is None:
@@ -361,7 +325,6 @@ def get_args():
     parser.add_argument('--incep', type=str, default='./gradcam/inceptionv3_market.pth.tar')
     parser.add_argument('--unet', type=str, default=None)
     parser.add_argument('--printly', action='store_true')
-    parser.add_argument('--onehot', type=int, default=None)
     parser.add_argument('--gpu', type=int, default=0)
     args = parser.parse_args()
     args.use_cuda = args.use_cuda and torch.cuda.is_available()
@@ -433,15 +396,8 @@ def main():
     unet_name = chk_unet.split('/')[-2]
     dir_root = './gradcam/results_id/'
 
-    if args.onehot is not None:
-        if args.onehot == 0:
-            onehot = '_0'
-        if args.onehot == 1:
-            onehot = '_1'
-    else:
-        onehot = '_None'
-    dir_path = '{root}/{img_type}_{dataset}{onehot}'.format(
-        root=dir_root, img_type=img_type, dataset=dataset, onehot=onehot)
+    dir_path = '{root}/{img_type}_{dataset}_temp'.format(
+        root=dir_root, img_type=img_type, dataset=dataset)
     os.makedirs(dir_path, exist_ok=True)
 
     dir_path = '{0}/{1}'.format(dir_path, unet_name)
@@ -465,7 +421,7 @@ def main():
     copy_state_dict(checkpoint['state_dict'], model_res)
     model_res.cuda()
     grad_cam_res = GradCam(model=model_res, feature_module=model_res.base[6],
-                           target_layer_names=["2"], onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+                           target_layer_names=["2"], use_cuda=args.use_cuda, printly=args.printly)
 
     #### DenseNet3
     model_den = meb_models.create("densenet", num_features=0, dropout=0, num_classes=num_classes)
@@ -473,13 +429,10 @@ def main():
     copy_state_dict(checkpoint['state_dict'], model_den)
     model_den.cuda()
     grad_cam_den = GradCam(model=model_den, feature_module=model_den.base[0],
-                           target_layer_names=["denseblock3"], name='dense', onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+                           target_layer_names=["denseblock3"], name='dense', use_cuda=args.use_cuda, printly=args.printly)
 
     grad_cam_den4 = GradCam(model=model_den, feature_module=model_den.base[0],
-                           target_layer_names=["denseblock4"], name='dense', onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
-
-    grad_cam_den2 = GradCam(model=model_den, feature_module=model_den.base[0],
-                           target_layer_names=["denseblock2"], name='dense', onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+                           target_layer_names=["denseblock4"], name='dense', use_cuda=args.use_cuda, printly=args.printly)
 
     #### InceptionV3
     model_incep = meb_models.create("inceptionv3", num_features=0, dropout=0, num_classes=num_classes)
@@ -488,26 +441,26 @@ def main():
     model_incep.cuda()
 
     grad_cam_incep = GradCam(model=model_incep, feature_module=model_incep.base,
-                           target_layer_names=["16"], name='incep', onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+                           target_layer_names=["16"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
 
     grad_cam_incep2 = GradCam(model=model_incep, feature_module=model_incep.base,
-                           target_layer_names=["17"], name='incep', onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+                           target_layer_names=["17"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
 
     grad_cam_incep3 = GradCam(model=model_incep, feature_module=model_incep.base,
-                           target_layer_names=["15"], name='incep', onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+                           target_layer_names=["15"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
 
     grad_cam_incep4 = GradCam(model=model_incep, feature_module=model_incep.base,
-                           target_layer_names=["14"], name='incep', onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+                           target_layer_names=["14"], name='incep', use_cuda=args.use_cuda, printly=args.printly)
 
     # Unet
     model_unet = meb_models.create("UNetAuto", num_channels=3,
                                batch_size=1, max_features=1024)
     model_d = meb_models.create("Discriminator")
     # grad_cam_unet = GradCam(model=model_unet, feature_module=model_unet.conv_block4,
-    #                         target_layer_names=["layers"], onehot=args.onehot, use_cuda=args.use_cuda, printly=args.printly)
+    #                         target_layer_names=["layers"], use_cuda=args.use_cuda, printly=args.printly)
 
     # grayscale_cam_id = GradCam(model=model_id, feature_module=model_id.base[6],
-    #                            target_layer_names=["2"], onehot=args.onehot, use_cuda=True, printly=args.printly)
+    #                            target_layer_names=["2"], use_cuda=True, printly=args.printly)
     checkpoint = load_checkpoint(chk_unet)
     copy_state_dict(checkpoint['state_dict'], model_unet)
     copy_state_dict(checkpoint['state_dict2'], model_d)
@@ -515,16 +468,16 @@ def main():
     model_d.cuda()
 
     grad_cam_d = GradCam(model=model_d, feature_module=model_d.model,
-                            target_layer_names=["8"], onehot=args.onehot, use_cuda=True, printly=args.printly, name='d')
+                            target_layer_names=["8"], use_cuda=True, printly=args.printly, name='d')
 
     grad_cam_d2 = GradCam(model=model_d, feature_module=model_d.model,
-                            target_layer_names=["12"], onehot=args.onehot, use_cuda=True, printly=args.printly, name='d')
+                            target_layer_names=["12"], use_cuda=True, printly=args.printly, name='d')
 
     grad_cam_d3 = GradCam(model=model_d, feature_module=model_d.model,
-                            target_layer_names=["5"], onehot=args.onehot, use_cuda=True, printly=args.printly, name='d')
+                            target_layer_names=["5"], use_cuda=True, printly=args.printly, name='d')
 
     grad_cam_d4 = GradCam(model=model_d, feature_module=model_d.model,
-                            target_layer_names=["2"], onehot=args.onehot, use_cuda=True, printly=args.printly, name='d')
+                            target_layer_names=["2"], use_cuda=True, printly=args.printly, name='d')
 
 
 
@@ -554,175 +507,98 @@ def main():
 
         input_img = preprocess_image(img)
 
+        recon_img = model_unet(input_img[0].cuda())
+        in_val = model_d(input_img[0].cuda())
+        out_val = model_d(recon_img)
+
+        ################
+        in_val_mean = torch.round(torch.mean(torch.sigmoid(in_val))).data
+        out_val_mean = torch.round(torch.mean(torch.sigmoid(out_val))).data
 
         # If None, returns the map for the highest scoring category.
         # Otherwise, targets the requested category.
         target_category = None
 
-        cam_incep_tensor, incep_mask = masking(input_img[0], img, grad_cam_incep, target_category)
-        cam_incep2_tensor, incep2_mask = masking(input_img[0], img, grad_cam_incep2, target_category)
-        cam_incep3_tensor, incep3_mask = masking(input_img[0], img, grad_cam_incep3, target_category)
-        cam_incep4_tensor, incep4_mask = masking(input_img[0], img, grad_cam_incep4, target_category)
-        cam_res_tensor, res_mask = masking(input_img[0], img, grad_cam_res, target_category)
-        cam_den_tensor, den_mask = masking(input_img[0], img, grad_cam_den, target_category)
-        cam_den4_tensor, den4_mask = masking(input_img[0], img, grad_cam_den4, target_category)
-        cam_den2_tensor, den2_mask = masking(input_img[0], img, grad_cam_den2, target_category)
+        grayscale_cam_incep = grad_cam_incep(input_img[0], target_category)
+        grayscale_cam_incep = cv2.resize(grayscale_cam_incep, (img.shape[1], img.shape[0]))
+        cam_incep = show_cam_on_image(img, grayscale_cam_incep)
 
-        ###############
-        recon_img = model_unet(input_img[0].cuda())
-        in_val = model_d(input_img[0].cuda())
-        out_val = model_d(recon_img)
+        grayscale_cam_incep2 = grad_cam_incep2(input_img[0], target_category)
+        grayscale_cam_incep2 = cv2.resize(grayscale_cam_incep2, (img.shape[1], img.shape[0]))
+        cam_incep2 = show_cam_on_image(img, grayscale_cam_incep2)
 
-        in_val_mean = torch.round(torch.mean(torch.sigmoid(in_val))).data
-        out_val_mean = torch.round(torch.mean(torch.sigmoid(out_val))).data
+        grayscale_cam_incep3 = grad_cam_incep3(input_img[0], target_category)
+        grayscale_cam_incep3 = cv2.resize(grayscale_cam_incep3, (img.shape[1], img.shape[0]))
+        cam_incep3 = show_cam_on_image(img, grayscale_cam_incep3)
 
-        cam_d1_tensor, d1_mask = masking(input_img[0], img, grad_cam_d, in_val_mean)
-        cam_d2_tensor, d2_mask = masking(input_img[0], img, grad_cam_d2, in_val_mean)
-        cam_d3_tensor, d3_mask = masking(input_img[0], img, grad_cam_d3, in_val_mean)
-        cam_d4_tensor, d4_mask = masking(input_img[0], img, grad_cam_d4, in_val_mean)
+        grayscale_cam_incep4 = grad_cam_incep4(input_img[0], target_category)
+        grayscale_cam_incep4 = cv2.resize(grayscale_cam_incep4, (img.shape[1], img.shape[0]))
+        cam_incep4 = show_cam_on_image(img, grayscale_cam_incep4)
 
-        recon_img_np = recon_img[0].detach().cpu().numpy().transpose((1, 2, 0))
-        cam_rd1_tensor, rd1_mask = masking(recon_img, recon_img_np, grad_cam_d, out_val_mean)
-        cam_rd2_tensor, rd2_mask = masking(recon_img, recon_img_np, grad_cam_d2, out_val_mean)
-        cam_rd3_tensor, rd3_mask = masking(recon_img, recon_img_np, grad_cam_d3, out_val_mean)
-        cam_rd4_tensor, rd4_mask = masking(recon_img, recon_img_np, grad_cam_d4, out_val_mean)
+        grayscale_cam_res = grad_cam_res(input_img[0], target_category)
+        grayscale_cam_res = cv2.resize(grayscale_cam_res, (img.shape[1], img.shape[0]))
+        cam_res = show_cam_on_image(img, grayscale_cam_res)
 
-        # grayscale_cam_d1 = grad_cam_d(input_img[0], in_val_mean)
-        # grayscale_cam_incep = grad_cam_incep(input_img[0], target_category)
-        # grayscale_cam_incep = cv2.resize(grayscale_cam_incep, (img.shape[1], img.shape[0]))
-        # cam_incep = show_cam_on_image(img, grayscale_cam_incep)
-        # cam_incep_tensor = torch.from_numpy(cam_incep.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
+        grayscale_cam_den = grad_cam_den(input_img[0], target_category)
+        grayscale_cam_den = cv2.resize(grayscale_cam_den, (img.shape[1], img.shape[0]))
+        cam_den = show_cam_on_image(img, grayscale_cam_den)
 
-        # grayscale_cam_incep2 = grad_cam_incep2(input_img[0], target_category)
-        # grayscale_cam_incep2 = cv2.resize(grayscale_cam_incep2, (img.shape[1], img.shape[0]))
-        # cam_incep2 = show_cam_on_image(img, grayscale_cam_incep2)
-        #
-        # grayscale_cam_incep3 = grad_cam_incep3(input_img[0], target_category)
-        # grayscale_cam_incep3 = cv2.resize(grayscale_cam_incep3, (img.shape[1], img.shape[0]))
-        # cam_incep3 = show_cam_on_image(img, grayscale_cam_incep3)
-        #
-        # grayscale_cam_incep4 = grad_cam_incep4(input_img[0], target_category)
-        # grayscale_cam_incep4 = cv2.resize(grayscale_cam_incep4, (img.shape[1], img.shape[0]))
-        # cam_incep4 = show_cam_on_image(img, grayscale_cam_incep4)
-        #
-        # grayscale_cam_res = grad_cam_res(input_img[0], target_category)
-        # grayscale_cam_res = cv2.resize(grayscale_cam_res, (img.shape[1], img.shape[0]))
-        # cam_res = show_cam_on_image(img, grayscale_cam_res)
-        #
-        # grayscale_cam_den = grad_cam_den(input_img[0], target_category)
-        # grayscale_cam_den = cv2.resize(grayscale_cam_den, (img.shape[1], img.shape[0]))
-        # cam_den = show_cam_on_image(img, grayscale_cam_den)
-        #
-        # grayscale_cam_den4 = grad_cam_den4(input_img[0], target_category)
-        # grayscale_cam_den4 = cv2.resize(grayscale_cam_den4, (img.shape[1], img.shape[0]))
-        # cam_den4 = show_cam_on_image(img, grayscale_cam_den4)
-        #
-        # grayscale_cam_den2 = grad_cam_den2(input_img[0], target_category)
-        # grayscale_cam_den2 = cv2.resize(grayscale_cam_den2, (img.shape[1], img.shape[0]))
-        # cam_den2 = show_cam_on_image(img, grayscale_cam_den2)
-        #
-        # grayscale_cam_d1 = grad_cam_d(input_img[0], in_val_mean)
-        # grayscale_cam_d2 = grad_cam_d2(input_img[0], in_val_mean)
-        # grayscale_cam_d3 = grad_cam_d3(input_img[0], in_val_mean)
-        # grayscale_cam_d4 = grad_cam_d4(input_img[0], in_val_mean)
-        #
-        # grayscale_cam_d1 = cv2.resize(grayscale_cam_d1, (img.shape[1], img.shape[0]))
-        # grayscale_cam_d2 = cv2.resize(grayscale_cam_d2, (img.shape[1], img.shape[0]))
-        # grayscale_cam_d3 = cv2.resize(grayscale_cam_d3, (img.shape[1], img.shape[0]))
-        # grayscale_cam_d4 = cv2.resize(grayscale_cam_d4, (img.shape[1], img.shape[0]))
-        #
-        # cam_d1 = show_cam_on_image(img, grayscale_cam_d1)
-        # cam_d2 = show_cam_on_image(img, grayscale_cam_d2)
-        # cam_d3 = show_cam_on_image(img, grayscale_cam_d3)
-        # cam_d4 = show_cam_on_image(img, grayscale_cam_d4)
-        #
-        # grayscale_cam_rd1 = grad_cam_d(recon_img, out_val_mean)
-        # grayscale_cam_rd2 = grad_cam_d2(recon_img, out_val_mean)
-        # grayscale_cam_rd3 = grad_cam_d3(recon_img, out_val_mean)
-        # grayscale_cam_rd4 = grad_cam_d4(recon_img, out_val_mean)
-        #
-        # # input_img2 = input_img[0].detach().cpu().numpy()[0].transpose((1, 2, 0))
-        # # img_clone2 = deprocess_image(input_img2)
-        # recon_img_np = recon_img[0].detach().cpu().numpy().transpose((1, 2, 0))
-        # # recon_img_clone = deprocess_image(recon_img_np)
-        # # recon_img_clone = recon_img_clone.transpose((1, 2, 0))
-        # # recon_img_clone = cv2.resize(recon_img_clone, (img.shape[1], img.shape[0]))
-        #
-        # grayscale_cam_rd1 = cv2.resize(grayscale_cam_rd1, (img.shape[1], img.shape[0]))
-        # grayscale_cam_rd2 = cv2.resize(grayscale_cam_rd2, (img.shape[1], img.shape[0]))
-        # grayscale_cam_rd3 = cv2.resize(grayscale_cam_rd3, (img.shape[1], img.shape[0]))
-        # grayscale_cam_rd4 = cv2.resize(grayscale_cam_rd4, (img.shape[1], img.shape[0]))
-        #
-        # cam_rd1 = show_cam_on_image(recon_img_np, grayscale_cam_rd1)
-        # cam_rd2 = show_cam_on_image(recon_img_np, grayscale_cam_rd2)
-        # cam_rd3 = show_cam_on_image(recon_img_np, grayscale_cam_rd3)
-        # cam_rd4 = show_cam_on_image(recon_img_np, grayscale_cam_rd4)
-        #
-        # cam_res_tensor = torch.from_numpy(cam_res.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_den_tensor = torch.from_numpy(cam_den.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_den4_tensor = torch.from_numpy(cam_den4.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_den2_tensor = torch.from_numpy(cam_den2.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_incep2_tensor = torch.from_numpy(cam_incep2.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_incep3_tensor = torch.from_numpy(cam_incep3.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_incep4_tensor = torch.from_numpy(cam_incep4.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_d1_tensor = torch.from_numpy(cam_d1.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_d2_tensor = torch.from_numpy(cam_d2.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_d3_tensor = torch.from_numpy(cam_d3.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_d4_tensor = torch.from_numpy(cam_d4.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_rd1_tensor = torch.from_numpy(cam_rd1.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_rd2_tensor = torch.from_numpy(cam_rd2.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_rd3_tensor = torch.from_numpy(cam_rd3.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
-        # cam_rd4_tensor = torch.from_numpy(cam_rd4.transpose((2, 0, 1))).unsqueeze(0).type(torch.FloatTensor)
+        grayscale_cam_den4 = grad_cam_den4(input_img[0], target_category)
+        grayscale_cam_den4 = cv2.resize(grayscale_cam_den4, (img.shape[1], img.shape[0]))
+        cam_den4 = show_cam_on_image(img, grayscale_cam_den4)
 
-        # cam_res_tensor = 255 - cam_res_tensor
-        # cam_den_tensor = 255 - cam_den_tensor
-        # cam_den4_tensor = 255 - cam_den4_tensor
-        # cam_den2_tensor = 255 - cam_den2_tensor
-        # cam_incep_tensor = 255 - cam_incep_tensor
-        # cam_incep2_tensor = 255 - cam_incep2_tensor
-        # cam_incep3_tensor = 255 - cam_incep3_tensor
-        # cam_incep4_tensor = 255 - cam_incep4_tensor
-        # cam_d1_tensor = 255 - cam_d1_tensor
-        # cam_d2_tensor = 255 - cam_d2_tensor
-        # cam_d3_tensor = 255 - cam_d3_tensor
-        # cam_d4_tensor = 255 - cam_d4_tensor
-        # cam_rd1_tensor = 255 - cam_rd1_tensor
-        # cam_rd2_tensor = 255 - cam_rd2_tensor
-        # cam_rd3_tensor = 255 - cam_rd3_tensor
-        # cam_rd4_tensor = 255 - cam_rd4_tensor
 
-        resultname = "{0}_{1:d}_{2:d}.jpg".format(name, int(in_val_mean), int(out_val_mean))
-        s1 = torch.cat([input_img[0].cpu(), cam_res_tensor, cam_den_tensor, cam_den4_tensor, cam_den2_tensor,
-                         cam_incep_tensor, cam_incep2_tensor, cam_incep3_tensor, cam_incep4_tensor], 0)
-        s2 = torch.cat([recon_img.cpu(), cam_d1_tensor, cam_d2_tensor, cam_d3_tensor, cam_d4_tensor,
-                         cam_rd1_tensor, cam_rd2_tensor, cam_rd3_tensor, cam_rd4_tensor, ], 0)
-        image_tensor = torch.cat([s1, s2], 0)
-        # image_grid = v_utils.make_grid(image_tensor.data, nrow=4, padding=0, normalize=True, scale_each=True)
-        image_grid2 = v_utils.make_grid(image_tensor.data, nrow=9, padding=0, normalize=True, scale_each=True)
+        grayscale_cam_d1 = grad_cam_d(input_img[0], in_val_mean)
+        grayscale_cam_d2 = grad_cam_d2(input_img[0], in_val_mean)
+        grayscale_cam_d3 = grad_cam_d3(input_img[0], in_val_mean)
+        grayscale_cam_d4 = grad_cam_d4(input_img[0], in_val_mean)
 
-        v_utils.save_image(image_grid2, resultname)
+        grayscale_cam_d1 = cv2.resize(grayscale_cam_d1, (img.shape[1], img.shape[0]))
+        grayscale_cam_d2 = cv2.resize(grayscale_cam_d2, (img.shape[1], img.shape[0]))
+        grayscale_cam_d3 = cv2.resize(grayscale_cam_d3, (img.shape[1], img.shape[0]))
+        grayscale_cam_d4 = cv2.resize(grayscale_cam_d4, (img.shape[1], img.shape[0]))
 
-        resultname2 = "{0}_{1:d}_{2:d}_masking.jpg".format(name, int(in_val_mean), int(out_val_mean))
-        s1 = torch.cat([input_img[0].cpu(), res_mask, den_mask, den4_mask, den2_mask,
-                        incep_mask, incep2_mask, incep3_mask, incep4_mask], 0)
-        s2 = torch.cat([recon_img.cpu(), d1_mask, d2_mask, d3_mask, d4_mask,
-                        rd1_mask, rd2_mask, rd3_mask, rd4_mask, ], 0)
-        image_tensor = torch.cat([s1, s2], 0)
-        image_grid2 = v_utils.make_grid(image_tensor.data, nrow=9, padding=0, normalize=True, scale_each=True)
-        v_utils.save_image(image_grid2, resultname2)
-        #########################
-        #########################
-        ## addh = cv2.hconcat([img_clone, cam_res, cam_den4,
-        ##                     cam_incep, cam_incep2, cam_incep4,
-        ##                     ])
-        # addh = cv2.hconcat([img_clone, cam_res, cam_den, cam_den4,
-        #                     cam_incep, cam_incep2, cam_incep3, cam_incep4,
+        cam_d1 = show_cam_on_image(img, grayscale_cam_d1)
+        cam_d2 = show_cam_on_image(img, grayscale_cam_d2)
+        cam_d3 = show_cam_on_image(img, grayscale_cam_d3)
+        cam_d4 = show_cam_on_image(img, grayscale_cam_d4)
+
+
+        grayscale_cam_rd1 = grad_cam_d(recon_img, out_val_mean)
+        grayscale_cam_rd2 = grad_cam_d2(recon_img, out_val_mean)
+        grayscale_cam_rd3 = grad_cam_d3(recon_img, out_val_mean)
+        grayscale_cam_rd4 = grad_cam_d4(recon_img, out_val_mean)
+
+        input_img2 = input_img[0].detach().cpu().numpy()[0].transpose((1, 2, 0))
+        img_clone2 = deprocess_image(input_img2)
+        recon_img = recon_img[0].detach().cpu().numpy().transpose((1, 2, 0))
+        recon_img_clone = deprocess_image(recon_img)
+        # recon_img_clone = recon_img_clone.transpose((1, 2, 0))
+        # recon_img_clone = cv2.resize(recon_img_clone, (img.shape[1], img.shape[0]))
+
+        grayscale_cam_rd1 = cv2.resize(grayscale_cam_rd1, (img.shape[1], img.shape[0]))
+        grayscale_cam_rd2 = cv2.resize(grayscale_cam_rd2, (img.shape[1], img.shape[0]))
+        grayscale_cam_rd3 = cv2.resize(grayscale_cam_rd3, (img.shape[1], img.shape[0]))
+        grayscale_cam_rd4 = cv2.resize(grayscale_cam_rd4, (img.shape[1], img.shape[0]))
+
+        cam_rd1 = show_cam_on_image(recon_img, grayscale_cam_rd1)
+        cam_rd2 = show_cam_on_image(recon_img, grayscale_cam_rd2)
+        cam_rd3 = show_cam_on_image(recon_img, grayscale_cam_rd3)
+        cam_rd4 = show_cam_on_image(recon_img, grayscale_cam_rd4)
+
+        # addh = cv2.hconcat([img_clone, cam_res, cam_den4,
+        #                     cam_incep, cam_incep2, cam_incep4,
         #                     ])
-        #
-        # addh2 = cv2.hconcat([img_clone2, cam_d1, cam_d2, cam_d3, cam_d4, recon_img_clone, cam_rd1, cam_rd2
-        #                     ])
-        # addv = cv2.vconcat([addh, addh2])
-        # cv2.imwrite("{0}_{1:d}_{2:d}.jpg".format(name, int(in_val_mean), int(out_val_mean)), addv)
+
+        addh = cv2.hconcat([img_clone, cam_res, cam_den, cam_den4,
+                            cam_incep, cam_incep2, cam_incep3, cam_incep4,
+                            ])
+
+        addh2 = cv2.hconcat([img_clone2, cam_d1, cam_d2, cam_d3, cam_d4, recon_img_clone, cam_rd1, cam_rd2
+                            ])
+        addv = cv2.vconcat([addh, addh2])
+        cv2.imwrite("{0}_{1:d}_{2:d}.jpg".format(name, int(in_val_mean), int(out_val_mean)), addv)
+        # print("{0}_{1:d}_{2:d}.jpg".format(name, int(in_val), int(out_val)))
         #########################
         #########################
 
@@ -732,8 +608,8 @@ def main():
         # out_den = model_den(input_img[0].cuda())
         # out_incep = model_incep(input_img[0].cuda())
 
-        # gb_model_res = GuidedBackpropReLUModel(model=model_res, onehot=args.onehot, use_cuda=args.use_cuda)
-        # gb = gb_model_res(input_img[0], target_category=target_category)
+        # gb_model_res = GuidedBackpropReLUModel(model=model_res, use_cuda=args.use_cuda)
+        # gb = gb_model_res(input_img, target_category=target_category)
         # gb = gb.transpose((1, 2, 0))
         #
         # cam_mask = cv2.merge([grayscale_cam_res, grayscale_cam_res, grayscale_cam_res])

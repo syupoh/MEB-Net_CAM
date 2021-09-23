@@ -298,9 +298,12 @@ def main_worker(args):
 
         return
 
-    prefix = "{src}_{tgt}_{arch}_{type}_{alpha:.3f}_{beta:.1f}_{delta:.4f}_{lr2:.4f}_{time}".format(
+    if args.arch_resume is None:
+        args.arch = ''
+    prefix = "{src}_{tgt}_{arch}_{type}_{alpha:.03f}_{beta:.01f}_{gamma:.02f}_{delta:.02f}_{lr2:.04f}_{time}".format(
         src=args.dataset_source, tgt=args.dataset_target, type=args.type,
-        arch=args.arch, alpha=args.alpha, beta=args.beta, delta=args.delta, lr2=args.lr2, time=curtime[0:16]
+        arch=args.arch, alpha=args.alpha, beta=args.beta, gamma=args.gamma,
+        delta=args.delta, lr2=args.lr2, time=curtime[0:16]
     )
     if args.prefix is not '':
         prefix = "{0}_{1}".format(

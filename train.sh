@@ -60,6 +60,7 @@ if [ ${gpu} -eq "0" ]
 #    alpha_set='0.5 0.05 0.01 0.001'
     beta_set='0.5'
     delta_set='0'
+    gamma_set='0.5'
     lr2_set='0.07'
 #    lr2_set='0.1 0.3 0.5 0.7'
     type_set='F'
@@ -70,38 +71,41 @@ if [ ${gpu} -eq "0" ]
       do
         for delta in ${delta_set}
         do
-          for lr2 in ${lr2_set}
+          for gamma in ${gamma_set}
           do
-            for type in ${type_set}
+            for lr2 in ${lr2_set}
             do
-              for dense_path in ${dense_path_set}
+              for type in ${type_set}
               do
-                python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
-                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
-                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch densenet \
-                 --arch-resume ${dense_path}/model_best.pth.tar \
-                 --logs-dir './logs/__unet/'${unetdirname} \
-                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta}
-              done
+                for dense_path in ${dense_path_set}
+                do
+                  python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
+                   --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
+                   --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch densenet \
+                   --arch-resume ${dense_path}/model_best.pth.tar \
+                   --logs-dir './logs/__unet/'${unetdirname} \
+                   --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta} --gamma ${gamma}
+                done
 
-              for incep_path in ${incep_path_set}
-              do
-                python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
-                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
-                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch inceptionv3 \
-                 --arch-resume ${incep_path}/model_best.pth.tar \
-                 --logs-dir './logs/__unet/'${unetdirname} \
-                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta}
-              done
+                for incep_path in ${incep_path_set}
+                do
+                  python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
+                   --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
+                   --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch inceptionv3 \
+                   --arch-resume ${incep_path}/model_best.pth.tar \
+                   --logs-dir './logs/__unet/'${unetdirname} \
+                   --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta} --gamma ${gamma}
+                done
 
-              for resnet_path in ${resnet_path_set}
-              do
-                python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
-                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
-                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch resnet50 \
-                 --arch-resume ${resnet_path}/model_best.pth.tar \
-                 --logs-dir './logs/__unet/'${unetdirname} \
-                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta}
+                for resnet_path in ${resnet_path_set}
+                do
+                  python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
+                   --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
+                   --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch resnet50 \
+                   --arch-resume ${resnet_path}/model_best.pth.tar \
+                   --logs-dir './logs/__unet/'${unetdirname} \
+                   --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta} --gamma ${gamma}
+                done
               done
             done
           done
@@ -258,224 +262,58 @@ if [ ${gpu} -eq "0" ]
   elif [ ${gpu} -eq "2" ]
   then
 
-#    ARCH1_set='logs/_pretrain_duke_unet0528_0609/pretrain_dukemtmc_market1501_densenet_2021-06-09T09:50_66.36'
-#    ARCH2_set='logs/_pretrain_duke_unet0528_0607/pretrain_dukemtmc_market1501_inceptionv3_2021-06-09T13:26_59.67'
-#    ARCH3_set='logs/_pretrain_duke_unet0528_0607/pretrain_dukemtmc_market1501_resnet50_2021-06-07T21:59_69.80'
-
-
-#################
-##### 1. pretrain
-#################
-
     SOURCE=dukemtmc
     TARGET=market1501
-    logsdirname='_pretrain_'${SOURCE}'_unet0615_ID_0616_unet0802_mtod_ID_unet0805_mtod_unet0808_mtod'
-    unetdirname='_unet0615_ID_0616_unet0802_mtod_ID_unet0805_mtod_unet0808_mtod_unet0811_mtod'
 
-#    logsdir='./logs/__pretrain/'${logsdirname}
-##    arch_set='resnet50 densenet inceptionv3'
-##    for arch in ${arch_set}
-##    do
-##      python3 main/source_pretrain.py -ds ${SOURCE} -dt ${TARGET} -a ${arch} --gpu ${gpu}\
-##        --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.000035 \
-##        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
-##        --logs-dir ${logsdir}
-##    done
 #
 ##################
 ###### 2. unet-train with pretrain gradcam
 ##################
 #
-#    pretrain_dir=${logsdir}
-#    dense_path_set=${pretrain_dir}'/pretrain_'${SOURCE}'_'${TARGET}'_densenet*'
-#    incep_path_set=${pretrain_dir}'/pretrain_'${SOURCE}'_'${TARGET}'_inceptionv3*'
-#    resnet_path_set=${pretrain_dir}'/pretrain_'${SOURCE}'_'${TARGET}'_resnet50*'
-#    alpha_set='0.001'
-##    alpha_set='0.5 0.05 0.01 0.001'
-#    beta_set='0.5'
-#    delta_set='0'
-#    lr2_set='0.07'
-##    lr2_set='0.1 0.3 0.5 0.7'
-#    type_set='F'
-#
-#    for alpha in ${alpha_set}
-#    do
-#      for beta in ${beta_set}
-#      do
-#        for delta in ${delta_set}
-#        do
-#          for lr2 in ${lr2_set}
-#          do
-#            for type in ${type_set}
-#            do
-#              for dense_path in ${dense_path_set}
-#              do
-#                python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
-#                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
-#                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch densenet \
-#                 --arch-resume ${dense_path}/model_best.pth.tar \
-#                 --logs-dir './logs/__unet/'${unetdirname} \
-#                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta}
-#              done
-#
-#              for incep_path in ${incep_path_set}
-#              do
-#                python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
-#                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
-#                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch inceptionv3 \
-#                 --arch-resume ${incep_path}/model_best.pth.tar \
-#                 --logs-dir './logs/__unet/'${unetdirname} \
-#                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta}
-#              done
-#
-#              for resnet_path in ${resnet_path_set}
-#              do
-#                python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
-#                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
-#                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch resnet50 \
-#                 --arch-resume ${resnet_path}/model_best.pth.tar \
-#                 --logs-dir './logs/__unet/'${unetdirname} \
-#                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta}
-#              done
-#            done
-#          done
-#        done
-#      done
-#    done
-#
-##################
-###### 3. pretrain with unet-train
-##################
-#
-#    unetlog='./logs/__unet/'${unetdirname}
-#    logsdir='./logs/__pretrain/_pretrain_'${SOURCE}${unetdirname}
-#
-#    arch_set='resnet50'
-#    AE_set=${unetlog}'/unet_'${TARGET}'_'${SOURCE}_${arch_set}'*'
-#
-#    for AEtransfer in ${AE_set}
-#    do
-#      for arch in ${arch_set}
-#      do
-#        python3 main/source_pretrain.py -ds ${SOURCE} -dt ${TARGET} -a ${arch} --gpu ${gpu}\
-#          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.000035 \
-#	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
-#	        --logs-dir ${logsdir} \
-#	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
-#      done
-#    done
-#
-#    arch_set='inceptionv3'
-#    AE_set=${unetlog}'/unet_'${TARGET}'_'${SOURCE}_${arch_set}'*'
-#
-#    for AEtransfer in ${AE_set}
-#    do
-#      for arch in ${arch_set}
-#      do
-#        python3 main/source_pretrain.py -ds ${SOURCE} -dt ${TARGET} -a ${arch} --gpu ${gpu}\
-#          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.000035 \
-#	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
-#	        --logs-dir ${logsdir} \
-#	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
-#      done
-#    done
-#
-#    arch_set='densenet'
-#    AE_set=${unetlog}'/unet_'${TARGET}'_'${SOURCE}_${arch_set}'*'
-#
-#    for AEtransfer in ${AE_set}
-#    do
-#      for arch in ${arch_set}
-#      do
-#        python3 main/source_pretrain.py -ds ${SOURCE} -dt ${TARGET} -a ${arch} --gpu ${gpu}\
-#          --margin 0.0 --num-instances 4 -b 24 -j 1 --warmup-step 10 --lr 0.000035 \
-#	        --milestones 40 70 --iters 200 --epochs 80 --eval-step 5 \
-#	        --logs-dir ${logsdir} \
-#	        --AEtransfer ${AEtransfer}/checkpoint_79.pth.tar
-#      done
-#    done
 
-##################
-###### 4. target train
-##################
+    alpha_set='0.001'
+#    alpha_set='0.5 0.05 0.01 0.001'
+    beta_set='0.5'
+    delta_set='0'
+    gamma_set='0.1 0.3'
+    lr2_set='0.07'
+#    lr2_set='0.1 0.3 0.5 0.7'
+    type_set='F'
 
-    pretrain_dir='_pretrain_'${SOURCE}${unetdirname}
-    ARCH1_set='logs/__pretrain/'${pretrain_dir}'/pretrain_'${SOURCE}'_'${TARGET}'_densenet* '
-    ARCH2_set='logs/__pretrain/'${pretrain_dir}'/pretrain_'${SOURCE}'_'${TARGET}'_inceptionv3* '
-    ARCH3_set='logs/__pretrain/'${pretrain_dir}'/pretrain_'${SOURCE}'_'${TARGET}'_resnet50* '
-
-    for ARCH1 in ${ARCH1_set}
+    for alpha in ${alpha_set}
     do
-      for ARCH2 in ${ARCH2_set}
+      for beta in ${beta_set}
       do
-        for ARCH3 in ${ARCH3_set}
+        for delta in ${delta_set}
         do
-          python3 main/target_train.py -dt ${TARGET} --gpu ${gpu}\
-            --num-instances 4 --lr 0.000035 --iters 800 -b 16 --epochs 120 \
-            --init-1 ${ARCH1}/model_best.pth.tar \
-            --init-2 ${ARCH2}/model_best.pth.tar \
-            --init-3 ${ARCH3}/model_best.pth.tar \
-            --logs-dir logs/${SOURCE}_${TARGET}/${pretrain_dir}
+          for gamma in ${gamma_set}
+          do
+            for lr2 in ${lr2_set}
+            do
+              for type in ${type_set}
+              do
+                python3 main/mine_unet_only.py -ds ${TARGET} -dt ${SOURCE}  \
+                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
+                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch densenet \
+                 --logs-dir './logs/__unet/_unet_0923_mtod' \
+                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta} --gamma ${gamma}
 
+                python3 main/mine_unet_only.py -ds ${SOURCE} -dt ${TARGET}  \
+                 --margin 0.0 --num-instance 4 -b 16 -j 1 --warmup-step 10 --lr 0.00035 --lr2 ${lr2} \
+                 --milestones 40 70 --epoch 80 --eval-step 5 --gpu ${gpu} --arch densenet \
+                 --logs-dir './logs/__unet/_unet_0923_dtom' \
+                 --alpha ${alpha} --beta ${beta} --type ${type} --delta ${delta} --gamma ${gamma}
+
+              done
+            done
+          done
         done
       done
     done
 
 
 
-#####################
-#####################
 
-#    SOURCE=market1501
-#    TARGET=dukemtmc
-#
-#    pretrain_dir='_pretrain_market_unet0701_ID_0701'
-#    ARCH1_set='logs/__pretrain/'${pretrain_dir}'/pretrain_market1501_dukemtmc_densenet_2021-07-03T08:26_74.83'
-#    ARCH2_set='logs/__pretrain/'${pretrain_dir}'/pretrain_market1501_dukemtmc_inceptionv3_2021-07-03T05:20_66.86'
-#    ARCH3_set='logs/__pretrain/'${pretrain_dir}'/pretrain_market1501_dukemtmc_resnet50_2021-07-03T02:24_78.07'
-#    lr_set='0.00014 0.00007 0.000001 0.000035'
-#    batch_set='16 8'
-#
-#    for ARCH1 in ${ARCH1_set}
-#    do
-#      for ARCH2 in ${ARCH2_set}
-#      do
-#        for ARCH3 in ${ARCH3_set}
-#        do
-#          for lr in ${lr_set}
-#          do
-#            for batch in ${batch_set}
-#            do
-#              python3 main/target_train.py -dt ${TARGET} --gpu ${gpu}\
-#                --num-instances 4 --lr ${lr} --iters 800 -b ${batch} --epochs 120 \
-#                --init-1 ${ARCH1}/model_best.pth.tar \
-#                --init-2 ${ARCH2}/model_best.pth.tar \
-#                --init-3 ${ARCH3}/model_best.pth.tar \
-#                --logs-dir logs/${SOURCE}_${TARGET}/${pretrain_dir}
-#            done
-#          done
-#        done
-#      done
-#    done
-
-#################
-#################
-#    SOURCE=market1501
-#    TARGET=dukemtmc
-#    ARCH1=densenet_2020-10-22T18:51
-#    ARCH2=resnet50_2020-10-22T20:29
-#    ARCH3=inceptionv3_2020-10-23T05:02
-#
-#    for unet in ${AE_set}
-#    do
-#      python3 main/target_train.py -dt ${TARGET} --gpu ${gpu}\
-#        --num-instances 4 --lr 0.00035 --iters 800 -b 32 --epochs 40 \
-#        --init-1 logs/_pre/pretrain_${SOURCE}_${TARGET}_${ARCH1}/model_best.pth.tar \
-#        --init-2 logs/_pre/pretrain_${SOURCE}_${TARGET}_${ARCH2}/model_best.pth.tar \
-#        --init-3 logs/_pre/pretrain_${SOURCE}_${TARGET}_${ARCH3}/model_best.pth.tar \
-#        --logs-dir logs/${SOURCE}_${TARGET}/${ARCH1}-${ARCH2}-${ARCH3}-MEB-Net \
-#        --unet ${unet}
-#    done
 
 
 
